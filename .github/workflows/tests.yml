@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_call:    # permet l'appel depuis deploy-hf.yml (needs: tests)
 
 jobs:
   tests:
