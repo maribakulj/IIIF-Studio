@@ -66,7 +66,7 @@ app.include_router(models_api.router, prefix=_V1_PREFIX)
 _STATIC_DIR = Path("/app/static")
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
+@app.get("/{full_path:path}", include_in_schema=False, response_model=None)
 async def serve_frontend(full_path: str) -> FileResponse | RedirectResponse:
     """En production sert le frontend React (SPA). En dev redirige vers /docs."""
     if _STATIC_DIR.is_dir():
