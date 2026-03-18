@@ -1,4 +1,7 @@
 # Scriptorium AI — Instructions permanentes pour Claude Code
+## Version 2.0 — mise à jour Sprint 2
+
+---
 
 ## 1. Contexte du projet
 
@@ -10,26 +13,60 @@ Pipeline général :
   images sources → ingestion → normalisation → analyse Google AI → JSON maître
   → passes dérivées → ALTO / METS / Manifest IIIF → interface web → validation humaine
 
-Le premier démonstrateur est le **Beatus de Saint-Sever** (manuscrit enluminé médiéval,
-latin, BnF Latin 8878). Mais la plateforme n'est PAS un outil Beatus.
-Le Beatus est un profil parmi d'autres.
+Premier démonstrateur : **Beatus de Saint-Sever** (BnF Latin 8878, manuscrit enluminé,
+latin carolingien, XIe siècle). Le Beatus est un profil parmi d'autres — pas un cas spécial.
 
 ---
 
 ## 2. Stack technique
 
-| Composant       | Technologie                                      |
-|-----------------|--------------------------------------------------|
-| Backend         | Python 3.11+, FastAPI, Uvicorn                   |
-| Validation      | Pydantic v2 (jamais v1)                          |
-| Base de données | SQLite via SQLAlchemy 2.0 async                  |
-| IA              | Google AI API, modèle sélectionnable dynamiquement|
-| SDK Google      | google-generativeai >= 0.3                       |
-| XML             | lxml                                             |
-| Images          | Pillow                                           |
-| Tests           | pytest, pytest-cov, pytest-asyncio               |
-| Frontend        | React + Vite, TypeScript, Tailwind CSS (sprint 4+)|
-| Hébergement     | HuggingFace Spaces (Docker) + HF Datasets        |
+| Composant       | Technologie                                            |
+|-----------------|--------------------------------------------------------|
+| Backend         | Python 3.11+, FastAPI, Uvicorn                         |
+| Validation      | Pydantic v2 (JAMAIS v1)                                |
+| Base de données | SQLite via SQLAlchemy 2.0 async + aiosqlite            |
+| IA              | Google AI — provider sélectionnable (section 9)        |
+| SDK Google      | google-genai (PAS google-generativeai — paquet différent)|
+| XML             | lxml                                                   |
+| Images          | Pillow (PIL)                                           |
+| HTTP client     | httpx (téléchargement images IIIF)                     |
+| Tests           | pytest, pytest-cov, pytest-asyncio                     |
+| Frontend        | React + Vite, TypeScript, Tailwind CSS (sprint 4+)     |
+| Hébergement     | HuggingFace Spaces (Docker) + HF Datasets              |
+
+### pyproject.toml — dépendances exactes
+
+```toml
+[project]
+name = "scriptorium-ai"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "fastapi>=0.104",
+    "uvicorn>=0.24",
+    "python-multipart>=0.0.6",
+    "google-genai>=0.3",
+    "lxml>=4.9",
+    "Pillow>=10.0",
+    "httpx>=0.25",
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.19",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-asyncio>=0.21",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+```
 
 ---
 
@@ -38,34 +75,64 @@ Le Beatus est un profil parmi d'autres.
 ```
 scriptorium-ai/
 │
-├── CLAUDE.md               ← CE FICHIER
-├── CONTEXT.md              ← état courant du projet (tu ne le modifies pas)
-├── DECISIONS.md            ← décisions figées (tu ne les remets pas en question)
-├── TODO.md                 ← tâches de la session courante
+├── CLAUDE.md               ← CE FICHIER — ne pas modifier sans instruction
+├── STATUS.md               ← état courant (mis à jour avant chaque session)
 │
 ├── backend/
 │   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                  ← point d'entrée FastAPI (sprint 4+)
+│   │   ├── config.py                ← settings Pydantic depuis env vars
 │   │   ├── api/
-│   │   │   └── v1/                  ← tous les endpoints FastAPI
+│   │   │   └── v1/
+│   │   │       ├── __init__.py
+│   │   │       ├── corpora.py
+│   │   │       ├── pages.py
+│   │   │       ├── jobs.py
+│   │   │       ├── models.py        ← endpoints sélection modèle IA
+│   │   │       └── export.py
 │   │   ├── models/                  ← modèles SQLAlchemy (tables BDD)
-│   │   ├── schemas/                 ← modèles Pydantic (source canonique des types)
 │   │   │   ├── __init__.py
-│   │   │   ├── corpus_profile.py
-│   │   │   ├── page_master.py
-│   │   │   └── annotation.py
+│   │   │   ├── corpus.py
+│   │   │   ├── page.py
+│   │   │   └── job.py
+│   │   ├── schemas/                 ← modèles Pydantic (SOURCE CANONIQUE)
+│   │   │   ├── __init__.py
+│   │   │   ├── corpus_profile.py    ← ✓ Sprint 1
+│   │   │   ├── page_master.py       ← ✓ Sprint 1
+│   │   │   └── annotation.py        ← ✓ Sprint 1
 │   │   └── services/
-│   │       ├── ingest/              ← ingestion corpus
-│   │       ├── image/               ← normalisation + dérivés
-│   │       ├── ai/                  ← appels Google AI + parsing + validation
-│   │       ├── export/              ← générateurs ALTO, METS, IIIF
-│   │       └── search/              ← index recherche
+│   │       ├── __init__.py
+│   │       ├── ingest/
+│   │       │   ├── __init__.py
+│   │       │   └── image_loader.py  ← chargement images (URL/fichier)
+│   │       ├── image/
+│   │       │   ├── __init__.py
+│   │       │   └── processor.py     ← dérivés + thumbnails
+│   │       ├── ai/
+│   │       │   ├── __init__.py
+│   │       │   ├── client.py        ← factory provider A/B/C
+│   │       │   ├── models.py        ← listage modèles disponibles
+│   │       │   ├── prompt_loader.py ← chargement + rendu templates
+│   │       │   └── pipeline.py      ← orchestration appels IA
+│   │       ├── export/
+│   │       │   ├── __init__.py
+│   │       │   ├── alto.py          ← générateur ALTO (sprint 3+)
+│   │       │   ├── mets.py          ← générateur METS (sprint 3+)
+│   │       │   └── iiif.py          ← générateur manifest IIIF (sprint 3+)
+│   │       └── search/
+│   │           ├── __init__.py
+│   │           └── index.py         ← index recherche (sprint 6+)
 │   ├── tests/
 │   │   ├── __init__.py
-│   │   ├── test_schemas.py
-│   │   └── test_profiles.py
+│   │   ├── test_schemas.py          ← ✓ 26 tests Sprint 1
+│   │   ├── test_profiles.py         ← ✓ 28 tests Sprint 1
+│   │   ├── test_ai_connection.py    ← Sprint 2 Session A
+│   │   ├── test_image_processing.py ← Sprint 2 Session B
+│   │   └── test_pipeline.py         ← Sprint 2 Session C
 │   └── pyproject.toml
 │
-├── prompts/
+├── prompts/                         ← ✓ Sprint 1
 │   ├── medieval-illuminated/
 │   │   ├── primary_v1.txt
 │   │   ├── transcription_v1.txt
@@ -81,22 +148,25 @@ scriptorium-ai/
 │   └── modern-handwritten/
 │       └── primary_v1.txt
 │
-├── profiles/
+├── profiles/                        ← ✓ Sprint 1
 │   ├── medieval-illuminated.json
 │   ├── medieval-textual.json
 │   ├── early-modern-print.json
 │   └── modern-handwritten.json
 │
-├── data/                   ← JAMAIS versionné (.gitignore)
+├── data/                            ← JAMAIS versionné (.gitignore)
 │   └── corpora/
 │       └── {corpus_slug}/
-│           ├── masters/
-│           ├── derivatives/
+│           ├── masters/             ← images sources originales
+│           ├── derivatives/         ← JPEG 1500px pour l'IA
+│           ├── thumbnails/          ← aperçus 300px
 │           ├── iiif/
+│           │   ├── manifest.json
+│           │   └── annotations/
 │           └── pages/
-│               └── {folio}/
-│                   ├── master.json
-│                   ├── gemini_raw.json
+│               └── {folio_label}/
+│                   ├── master.json      ← PageMaster canonique
+│                   ├── ai_raw.json      ← réponse brute IA (JAMAIS effacée)
 │                   ├── alto.xml
 │                   └── annotations.json
 │
@@ -104,18 +174,16 @@ scriptorium-ai/
     └── Dockerfile
 ```
 
-Ne jamais créer de fichiers en dehors de cette arborescence sans demande explicite.
-
 ---
 
-## 4. Modèle de données — schémas canoniques
+## 4. Modèles de données — schémas Pydantic canoniques
 
-### 4.1 CorpusProfile
-
-Entité centrale. Tout le pipeline en est piloté.
-Fichier : `backend/app/schemas/corpus_profile.py`
+### 4.1 CorpusProfile (corpus_profile.py)
 
 ```python
+from enum import Enum
+from pydantic import BaseModel, ConfigDict, Field
+
 class LayerType(str, Enum):
     IMAGE = "image"
     OCR_DIPLOMATIC = "ocr_diplomatic"
@@ -147,23 +215,23 @@ class UncertaintyConfig(BaseModel):
 
 class CorpusProfile(BaseModel):
     model_config = ConfigDict(frozen=True)
-
     profile_id: str
     label: str
     language_hints: list[str]
     script_type: ScriptType
     active_layers: list[LayerType]
-    prompt_templates: dict[str, str]      # {"primary": "path/v1.txt", ...}
+    prompt_templates: dict[str, str]      # {"primary": "prompts/.../v1.txt"}
     uncertainty_config: UncertaintyConfig
     export_config: ExportConfig
 ```
 
-### 4.2 PageMaster
-
-Source canonique de toute page. Toutes les sorties en dérivent.
-Fichier : `backend/app/schemas/page_master.py`
+### 4.2 PageMaster (page_master.py)
 
 ```python
+from datetime import datetime
+from typing import Any, Literal
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 class RegionType(str, Enum):
     TEXT_BLOCK = "text_block"
     MINIATURE = "miniature"
@@ -182,12 +250,20 @@ class Region(BaseModel):
 
     @field_validator("bbox")
     @classmethod
-    def bbox_must_be_positive(cls, v):
+    def bbox_must_be_valid(cls, v: list[int]) -> list[int]:
         if any(x < 0 for x in v):
-            raise ValueError("bbox values must be >= 0")
+            raise ValueError("bbox: toutes les valeurs doivent être >= 0")
         if v[2] <= 0 or v[3] <= 0:
-            raise ValueError("bbox width and height must be > 0")
+            raise ValueError("bbox: width et height doivent être > 0")
         return v
+
+class ImageInfo(BaseModel):
+    master: str                        # path ou URL source
+    derivative_web: str | None = None  # JPEG 1500px
+    thumbnail: str | None = None       # JPEG 300px
+    iiif_base: str | None = None
+    width: int
+    height: int
 
 class OCRResult(BaseModel):
     diplomatic_text: str = ""
@@ -201,6 +277,10 @@ class Translation(BaseModel):
     fr: str = ""
     en: str = ""
 
+class Summary(BaseModel):
+    short: str = ""
+    detailed: str = ""
+
 class CommentaryClaim(BaseModel):
     claim: str
     evidence_region_ids: list[str] = []
@@ -212,10 +292,11 @@ class Commentary(BaseModel):
     claims: list[CommentaryClaim] = []
 
 class ProcessingInfo(BaseModel):
-    model_id: str
+    provider: str                       # "google_ai_studio"|"vertex_api_key"|"vertex_service_account"
+    model_id: str                       # ID technique retourné par l'API
     model_display_name: str
-    prompt_version: str
-    raw_response_path: str
+    prompt_version: str                 # ex: "primary_v1"
+    raw_response_path: str              # chemin vers ai_raw.json
     processed_at: datetime
     cost_estimate_usd: float | None = None
 
@@ -234,28 +315,24 @@ class EditorialInfo(BaseModel):
     notes: list[str] = []
 
 class PageMaster(BaseModel):
-    schema_version: str = "1.0"
-    page_id: str
-    corpus_profile: str            # profile_id du CorpusProfile
+    schema_version: str = "1.0"        # OBLIGATOIRE — ne jamais omettre
+    page_id: str                        # format: {corpus_slug}-{folio_label}
+    corpus_profile: str                 # profile_id du CorpusProfile utilisé
     manuscript_id: str
-    folio_label: str
-    sequence: int
-
-    image: dict                    # master, derivative_web, iiif_base, width, height
-    layout: dict                   # {"regions": [Region, ...]}
+    folio_label: str                    # ex: "13r", "f29"
+    sequence: int                       # ordre dans le manuscrit (1-based)
+    image: ImageInfo
+    layout: dict                        # {"regions": [Region, ...]}
     ocr: OCRResult | None = None
     translation: Translation | None = None
-    summary: dict | None = None    # {"short": str, "detailed": str}
+    summary: Summary | None = None
     commentary: Commentary | None = None
-    extensions: dict[str, Any] = {}   # données spécifiques au profil
-
+    extensions: dict[str, Any] = {}    # données spécifiques au profil
     processing: ProcessingInfo | None = None
     editorial: EditorialInfo = EditorialInfo()
 ```
 
-### 4.3 AnnotationLayer
-
-Fichier : `backend/app/schemas/annotation.py`
+### 4.3 AnnotationLayer (annotation.py)
 
 ```python
 class LayerStatus(str, Enum):
@@ -275,297 +352,522 @@ class AnnotationLayer(BaseModel):
     source_model: str | None = None
     prompt_version: str | None = None
     created_at: datetime
+
+class ModelConfig(BaseModel):
+    corpus_id: str
+    provider: str
+    selected_model_id: str
+    selected_model_display_name: str
+    supports_vision: bool
+    last_fetched_at: datetime
+    available_models: list[dict] = []
 ```
 
 ---
 
-## 5. Règles absolues — NE JAMAIS ENFREINDRE
+## 5. Exemple complet d'un master.json valide
 
-### R01 — Aucune logique hardcodée par corpus
-Jamais de condition du type `if corpus == "beatus"` ou `if profile == "medieval-illuminated"`.
-Toute logique spécifique passe par le CorpusProfile. Le code est générique.
+Cet exemple est la référence. Tout master.json produit doit avoir cette forme.
 
-### R02 — Le JSON maître est la source canonique
-Toutes les sorties (IIIF, ALTO, METS, annotations) sont générées depuis le PageMaster JSON.
-On ne génère jamais une sortie directement depuis la réponse brute de l'IA.
-
-### R03 — Convention bbox [x, y, width, height] UNIQUEMENT
-Format : [x, y, largeur, hauteur] en pixels entiers dans l'image source.
-- x, y = coin supérieur gauche
-- width, height = dimensions
-JAMAIS [x1, y1, x2, y2] (coins opposés).
-JAMAIS de coordonnées relatives ou normalisées (0.0–1.0).
-Le validator Pydantic doit rejeter toute bbox avec width ou height <= 0.
-
-### R04 — Prompts dans des fichiers, jamais dans le code
-Les prompts vivent dans prompts/{profile_id}/{famille}_v{n}.txt
-Le code charge le fichier, injecte les variables, envoie à l'API.
-Jamais de f-string de prompt hardcodée dans un fichier .py.
-
-### R05 — Double stockage des réponses IA
-Toujours écrire DEUX fichiers distincts :
-- `gemini_raw.json` : réponse brute telle que retournée par l'API
-- `master.json` : JSON parsé, validé par Pydantic, canonique
-Un seul fichier = bug. Les deux sont obligatoires.
-
-### R06 — Clé API jamais dans le code
-La clé API Google AI vit uniquement dans les variables d'environnement.
-Jamais dans : le code, les logs, les fichiers versionnés, les exports, les JSON maîtres.
-Variable d'environnement : GOOGLE_AI_API_KEY
-
-### R07 — Pydantic v2 exclusivement
-Syntaxe v2 : `model_config = ConfigDict(...)` et non `class Config:`
-`@field_validator` et non `@validator`
-`model_validate()` et non `parse_obj()`
-Imports : `from pydantic import BaseModel, ConfigDict, Field, field_validator`
-
-### R08 — Tests pour tout modèle de données
-Aucun nouveau schéma Pydantic sans test correspondant.
-Aucun profil JSON sans test de chargement et validation.
-Les tests ne sont pas optionnels.
-
-### R09 — schema_version dans tout JSON maître
-Le champ `schema_version: str = "1.0"` est obligatoire dans PageMaster.
-Si le schéma change, la version change.
-
-### R10 — Endpoints préfixés /api/v1/
-Tous les endpoints FastAPI sont sous /api/v1/.
-Exemple : /api/v1/corpora, /api/v1/pages/{id}/master-json
+```json
+{
+  "schema_version": "1.0",
+  "page_id": "beatus-lat8878-0013r",
+  "corpus_profile": "medieval-illuminated",
+  "manuscript_id": "beatus-lat8878",
+  "folio_label": "13r",
+  "sequence": 25,
+  "image": {
+    "master": "https://gallica.bnf.fr/ark:/12148/btv1b8432314s/f29.highres",
+    "derivative_web": "data/corpora/beatus-lat8878/derivatives/0013r.jpg",
+    "thumbnail": "data/corpora/beatus-lat8878/thumbnails/0013r.jpg",
+    "iiif_base": null,
+    "width": 3543,
+    "height": 4724
+  },
+  "layout": {
+    "regions": [
+      {
+        "id": "r1",
+        "type": "text_block",
+        "bbox": [320, 510, 2900, 3200],
+        "confidence": 0.91,
+        "polygon": null,
+        "parent_region_id": null
+      },
+      {
+        "id": "r2",
+        "type": "miniature",
+        "bbox": [320, 3750, 2900, 800],
+        "confidence": 0.95,
+        "polygon": null,
+        "parent_region_id": null
+      }
+    ]
+  },
+  "ocr": {
+    "diplomatic_text": "Explicit liber primus incipit secundus...",
+    "blocks": [],
+    "lines": [],
+    "language": "la",
+    "confidence": 0.74,
+    "uncertain_segments": ["primus incipit"]
+  },
+  "translation": {
+    "fr": "Fin du premier livre, début du second...",
+    "en": "End of the first book, beginning of the second..."
+  },
+  "summary": {
+    "short": "Page de transition entre deux livres avec scène apocalyptique.",
+    "detailed": "Ce folio marque la fin du livre I et l'ouverture du livre II..."
+  },
+  "commentary": {
+    "public": "Cette page illustre la transition narrative entre deux grandes parties...",
+    "scholarly": "Le programme iconographique de ce folio suit la tradition des Beatus...",
+    "claims": [
+      {
+        "claim": "La scène de la région r2 représente l'ouverture du cinquième sceau",
+        "evidence_region_ids": ["r2"],
+        "certainty": "medium"
+      }
+    ]
+  },
+  "extensions": {
+    "iconography": [
+      {
+        "region_id": "r2",
+        "label": "ouverture_cinquieme_sceau",
+        "description": "Personnages en prière, autel central, âmes des martyrs",
+        "confidence": 0.78,
+        "tags": ["apocalypse", "sceau", "martyrs", "autel"]
+      }
+    ],
+    "materiality": {
+      "notes": ["Légère décoloration dans la marge inférieure droite"],
+      "pigment_hints": ["ocre", "lapis-lazuli probable", "blanc de plomb"]
+    }
+  },
+  "processing": {
+    "provider": "vertex_api_key",
+    "model_id": "gemini-2.0-flash-exp",
+    "model_display_name": "Gemini 2.0 Flash Experimental",
+    "prompt_version": "primary_v1",
+    "raw_response_path": "data/corpora/beatus-lat8878/pages/0013r/ai_raw.json",
+    "processed_at": "2025-01-01T10:00:00Z",
+    "cost_estimate_usd": 0.004
+  },
+  "editorial": {
+    "status": "machine_draft",
+    "validated": false,
+    "validated_by": null,
+    "version": 1,
+    "notes": []
+  }
+}
+```
 
 ---
 
-## 6. Anti-patterns — ce qui est interdit
+## 6. Règles absolues — NE JAMAIS ENFREINDRE
 
+### R01 — Zéro logique hardcodée par corpus
 ```python
-# ❌ INTERDIT — logique hardcodée par corpus
+# ❌ INTERDIT
 if profile_id == "medieval-illuminated":
     process_iconography()
 
-# ✅ CORRECT — piloté par le profil
+# ✅ CORRECT
 if "iconography_detection" in corpus_profile.active_layers:
     process_iconography()
+```
 
-# ❌ INTERDIT — prompt hardcodé dans le code
-prompt = f"Tu analyses un manuscrit {profile.label}. Retourne ce JSON..."
+### R02 — Le JSON maître est la source canonique
+Toutes les sorties (IIIF, ALTO, METS) sont générées depuis PageMaster.
+Jamais depuis ai_raw.json directement.
 
-# ✅ CORRECT — prompt chargé depuis fichier versionné
-prompt_path = corpus_profile.prompt_templates["primary"]
-prompt = load_and_render_prompt(prompt_path, context)
-
-# ❌ INTERDIT — bbox en coordonnées de coins opposés
+### R03 — Convention bbox [x, y, width, height] UNIQUEMENT
+```python
+# ❌ INTERDIT — coordonnées de coins opposés
 bbox = [x1, y1, x2, y2]
 
-# ✅ CORRECT — bbox en [x, y, width, height]
+# ✅ CORRECT — origine + dimensions
 bbox = [x, y, x2 - x1, y2 - y1]
-
-# ❌ INTERDIT — pydantic v1
-class MyModel(BaseModel):
-    class Config:
-        frozen = True
-
-# ✅ CORRECT — pydantic v2
-class MyModel(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-# ❌ INTERDIT — réponse brute non conservée
-master_json = parse_ai_response(response)
-save(master_json)
-
-# ✅ CORRECT — double stockage obligatoire
-save_raw(response, path="gemini_raw.json")
-master_json = parse_and_validate(response)
-save_canonical(master_json, path="master.json")
-
-# ❌ INTERDIT — clé API dans le code
-client = genai.Client(api_key="AIza...")
-
-# ✅ CORRECT — depuis l'environnement
-client = genai.Client(api_key=os.environ["GOOGLE_AI_API_KEY"])
 ```
+Pixels entiers absolus dans l'image. Width et height > 0. Toujours validé par Pydantic.
+
+### R04 — Prompts dans des fichiers versionnés, jamais dans le code
+```python
+# ❌ INTERDIT
+prompt = f"Tu analyses un {profile.label}. Retourne ce JSON..."
+
+# ✅ CORRECT
+prompt = load_and_render_prompt(
+    corpus_profile.prompt_templates["primary"],
+    {"profile_label": profile.label, ...}
+)
+```
+
+### R05 — Double stockage obligatoire des réponses IA
+```python
+# ❌ INTERDIT — un seul fichier
+master = parse(response)
+save(master, "master.json")
+
+# ✅ CORRECT — toujours deux fichiers distincts
+save_raw(response.text, page_dir / "ai_raw.json")      # brut, jamais effacé
+master = parse_and_validate(response.text)
+save_json(master.model_dump(), page_dir / "master.json")
+```
+
+### R06 — Secrets uniquement dans les variables d'environnement
+Jamais dans le code, les logs, les fichiers versionnés, les exports JSON.
+
+### R07 — Pydantic v2 exclusivement
+```python
+# ❌ INTERDIT — syntaxe v1
+class Config:
+    frozen = True
+
+# ✅ CORRECT — syntaxe v2
+model_config = ConfigDict(frozen=True)
+```
+
+### R08 — Tests pour tout nouveau modèle
+Aucun schéma Pydantic sans test de validation et de rejet.
+
+### R09 — schema_version dans tout PageMaster
+`schema_version: str = "1.0"` — obligatoire, valeur par défaut suffit.
+
+### R10 — Endpoints préfixés /api/v1/
+
+### R11 — SDK google-genai, pas google-generativeai
+```python
+# ❌ INTERDIT
+import google.generativeai as genai
+
+# ✅ CORRECT
+from google import genai
+```
+
+### R12 — Jamais le master TIFF/JP2 brut envoyé à l'IA
+Toujours passer par le dérivé JPEG 1500px max.
 
 ---
 
-## 7. Conventions de code
+## 7. Patterns de code attendus
 
-### Nommage
-- Python : snake_case pour variables et fonctions, PascalCase pour classes
-- TypeScript (sprint 4+) : camelCase pour variables, PascalCase pour composants
-- Fichiers Python : snake_case.py
-- Fichiers de prompts : {famille}_v{n}.txt (ex: primary_v1.txt, commentary_v2.txt)
-- Profils JSON : {profile_id}.json (ex: medieval-illuminated.json)
-- IDs de pages : {corpus_slug}-{folio_label} (ex: beatus-lat8878-0013r)
+### Config depuis variables d'environnement (config.py)
 
-### Structure d'un fichier Python
 ```python
-"""
-Module docstring courte (1–2 lignes max).
-"""
-# 1. stdlib
-import os
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    ai_provider: str = "vertex_api_key"
+    google_ai_studio_api_key: str | None = None
+    vertex_api_key: str | None = None
+    vertex_project_id: str | None = None
+    vertex_location: str = "europe-west1"
+    vertex_service_account_json: str | None = None
+    data_dir: str = "data"
+
+    model_config = ConfigDict(env_file=".env", extra="ignore")
+
+settings = Settings()
+```
+
+### Pattern SQLAlchemy (models/)
+
+```python
+from sqlalchemy import String, Integer, Float, DateTime, JSON
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from datetime import datetime
-from typing import Any
 
-# 2. third-party
-from pydantic import BaseModel, Field
+class Base(DeclarativeBase):
+    pass
 
-# 3. local
-from app.schemas.corpus_profile import CorpusProfile
+class PageModel(Base):
+    __tablename__ = "pages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    manuscript_id: Mapped[str] = mapped_column(String, index=True)
+    folio_label: Mapped[str] = mapped_column(String)
+    sequence: Mapped[int] = mapped_column(Integer)
+    processing_status: Mapped[str] = mapped_column(String, default="ingested")
+    confidence_summary: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 ```
 
-### Gestion d'erreurs
-```python
-# ✅ Exceptions explicites avec message utile
-if not image_path.exists():
-    raise FileNotFoundError(f"Image not found: {image_path}")
+### Pattern FastAPI endpoint (api/v1/)
 
-# ✅ Logging structuré
+```python
+from fastapi import APIRouter, HTTPException, Depends
+from app.schemas.page_master import PageMaster
+
+router = APIRouter(prefix="/api/v1")
+
+@router.get("/pages/{page_id}/master-json", response_model=PageMaster)
+async def get_master_json(page_id: str) -> PageMaster:
+    master_path = get_page_dir(page_id) / "master.json"
+    if not master_path.exists():
+        raise HTTPException(status_code=404, detail=f"Page {page_id} not found")
+    return PageMaster.model_validate_json(master_path.read_text())
+
+@router.put("/pages/{page_id}/master-json", response_model=PageMaster)
+async def update_master_json(page_id: str, master: PageMaster) -> PageMaster:
+    # incrémenter la version
+    master = master.model_copy(update={"editorial": {
+        **master.editorial.model_dump(),
+        "version": master.editorial.version + 1
+    }})
+    save_json(master.model_dump(), get_page_dir(page_id) / "master.json")
+    return master
+```
+
+### Pattern gestion d'erreur IA
+
+```python
+import json
 import logging
+from pydantic import ValidationError
+
 logger = logging.getLogger(__name__)
-logger.info("Processing page", extra={"page_id": page_id, "profile": profile_id})
 
-# ❌ Jamais
-try:
-    ...
-except:
-    pass  # silence total = bug silencieux
-```
+def parse_ai_response(raw_text: str, page_id: str) -> PageMaster:
+    # 1. Nettoyer les éventuels blocs markdown (triple backtick json)
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        cleaned = "\n".join(lines[1:-1])
 
-### Type hints
-- Obligatoires sur toutes les signatures de fonctions
-- `Any` accepté uniquement pour les extensions de profil
-- Préférer `str | None` à `Optional[str]` (Python 3.10+ syntax)
+    # 2. Parser le JSON
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        logger.error("JSON invalide", extra={"page_id": page_id, "error": str(e)})
+        raise ValueError(f"Réponse IA non parseable pour {page_id}: {e}")
 
----
-
-## 8. Pipeline — étapes et responsabilités
-
-```
-Étape 1 — Ingestion
-  Input  : dossier local / ZIP / URLs IIIF / manifest IIIF
-  Output : enregistrements Corpus + Manuscript + Page en SQLite
-  Status : INGESTED
-  Règle  : aucun appel IA, aucune image modifiée
-
-Étape 2 — Préparation image
-  Input  : image master (TIFF / JP2 / JPEG / PNG)
-  Output : dérivé JPEG 1500px max pour l'IA + thumbnail
-  Status : PREPARED
-  Règle  : jamais envoyer le master brut à l'IA
-
-Étape 3 — Analyse primaire IA (1 seul appel par page)
-  Input  : dérivé JPEG + prompt primary_v1.txt rendu avec le profil
-  Output : gemini_raw.json (brut) + master.json partiel (layout + OCR)
-  Status : ANALYZED
-  Règle  : 1 seule passe visuelle. Pas d'appels concurrents sur la même image.
-
-Étape 4 — Passes dérivées (selon active_layers du profil)
-  Input  : master.json de l'étape 3
-  Output : master.json enrichi (traduction, commentaire, iconographie)
-  Status : LAYERED
-  Règle  : les passes dérivées sont textuelles. Pas de nouvelle passe visuelle
-           sauf pour l'iconographie (crops des régions uniquement).
-
-Étape 5 — Génération documentaire
-  Input  : master.json complet
-  Output : alto.xml + mets.xml + manifest.json + annotations IIIF
-  Status : EXPORTED
-  Règle  : toujours régénérable depuis master.json. Ne jamais éditer les XML
-           manuellement — ils sont des sorties dérivées.
-
-Étape 6 — Validation humaine
-  Input  : master.json + interface
-  Output : master.json corrigé avec version incrémentée
-  Status : VALIDATED → PUBLISHED
+    # 3. Valider avec Pydantic
+    try:
+        return PageMaster.model_validate(data)
+    except ValidationError as e:
+        logger.error("Validation Pydantic échouée", extra={"page_id": page_id, "errors": e.errors()})
+        raise ValueError(f"JSON IA invalide pour {page_id}: {e}")
 ```
 
 ---
 
-## 9. Providers IA — détection dynamique multi-provider
+## 8. Rendu des prompts — conventions
 
-Les clés API vivent dans les **secrets HuggingFace** (variables d'environnement).
-L'interface ne demande **jamais** de clé à l'utilisateur (R06).
-Il n'y a **pas** de variable `AI_PROVIDER` globale : le provider est choisi par corpus.
+### Variables disponibles dans tous les templates
 
-Secrets HuggingFace à configurer :
 ```
-GOOGLE_AI_STUDIO_API_KEY = AIza...
-VERTEX_API_KEY            = AQ.Ab...
-VERTEX_SERVICE_ACCOUNT_JSON = {...}   # JSON complet du compte de service
-MISTRAL_API_KEY           = ...
-BASE_URL                  = https://ma-ri-ba-ku-scriptorium-ai.hf.space
+{{profile_label}}      → CorpusProfile.label
+{{language_hints}}     → ", ".join(CorpusProfile.language_hints)
+{{script_type}}        → CorpusProfile.script_type.value
+{{folio_label}}        → Page.folio_label
+{{manuscript_title}}   → Manuscript.title (si disponible)
 ```
 
-### 4 providers supportés
-
-| Provider            | Variable d'env              | Modèles                          |
-|---------------------|-----------------------------|----------------------------------|
-| Google AI Studio    | `GOOGLE_AI_STUDIO_API_KEY`  | Gemini (liste dynamique via API) |
-| Vertex AI clé API   | `VERTEX_API_KEY`            | Gemini (liste dynamique via API) |
-| Vertex Compte serv. | `VERTEX_SERVICE_ACCOUNT_JSON` | Gemini (liste dynamique via API) |
-| Mistral AI          | `MISTRAL_API_KEY`           | pixtral-large-latest, pixtral-12b-2409 (liste statique) |
-
-### Flux de sélection
-
-1. Au démarrage, le backend détecte automatiquement quels providers sont
-   disponibles selon les clés présentes → `GET /api/v1/providers`
-2. L'interface affiche chaque provider avec badge Disponible / Clé manquante
-3. L'utilisateur clique sur un provider disponible → charge ses modèles
-   → `GET /api/v1/providers/{provider_type}/models`
-4. L'utilisateur sélectionne un modèle → `PUT /api/v1/corpora/{id}/model`
-5. Modèle stocké dans `ModelConfig` par corpus (pas dans CorpusProfile)
-6. Chaque appel IA journalise `provider`, `model_id`, `model_display_name`
-
-### Entité `ModelConfig` (par corpus)
+### Implémentation attendue (prompt_loader.py)
 
 ```python
-class ModelConfig(BaseModel):
-    corpus_id: str
-    selected_model_id: str
-    selected_model_display_name: str
-    provider: ProviderType              # google_ai_studio | vertex_api_key | vertex_service_account | mistral
-    supports_vision: bool
-    last_fetched_at: datetime
-    available_models: list[dict]        # cache sérialisé des ModelInfo
-```
+from pathlib import Path
 
-### Interface `AIProvider` (backend/app/services/ai/base.py)
+def load_and_render_prompt(template_path: str, context: dict[str, str]) -> str:
+    """Charge un template de prompt et injecte les variables."""
+    path = Path(template_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Template introuvable : {template_path}")
 
-Chaque provider implémente :
-- `is_configured() → bool`
-- `list_models() → list[ModelInfo]`
-- `generate_content(image_bytes, prompt, model_id) → str`
+    content = path.read_text(encoding="utf-8")
 
-L'analyseur (`analyzer.py`) appelle `get_provider(model_config.provider).generate_content(…)`
-de façon identique pour tous les providers.
+    for key, value in context.items():
+        content = content.replace("{{" + key + "}}", str(value))
 
----
+    # Vérifier qu'il ne reste pas de variables non résolues
+    if "{{" in content:
+        import re
+        unresolved = re.findall(r"\{\{\w+\}\}", content)
+        raise ValueError(f"Variables non résolues dans le prompt : {unresolved}")
 
-## 10. Statuts métier
-
-### Corpus / Page
-```
-CREATED → INGESTING → INGESTED → PROCESSING → READY → ERROR
-INGESTED → PREPARED → ANALYZED → LAYERED → EXPORTED → VALIDATED → ERROR
-```
-
-### Couche (AnnotationLayer)
-```
-PENDING → RUNNING → DONE → FAILED → NEEDS_REVIEW → VALIDATED
-```
-
-### Éditorial (PageMaster.editorial.status)
-```
-machine_draft → needs_review → reviewed → validated → published
+    return content
 ```
 
 ---
 
-## 11. Endpoints API — liste complète
+## 9. Providers Google AI — architecture à 3 options
+
+### Variables d'environnement (GitHub Secrets)
 
 ```
-# Providers & modèles (détection automatique depuis les secrets HF)
-GET    /api/v1/providers
-GET    /api/v1/providers/{provider_type}/models
+# Option A — Google AI Studio (développement, gratuit)
+GOOGLE_AI_STUDIO_API_KEY  = AIza...
+
+# Option B — Vertex AI avec clé API Express (production)
+VERTEX_API_KEY             = AQ.Ab...
+VERTEX_PROJECT_ID          = beatus-490422
+VERTEX_LOCATION            = europe-west1
+
+# Option C — Vertex AI avec compte de service (institutions)
+VERTEX_SERVICE_ACCOUNT_JSON = { ...json complet... }
+VERTEX_PROJECT_ID           = (même)
+VERTEX_LOCATION             = (même)
+
+# Sélecteur actif — changer pour switcher de provider
+AI_PROVIDER = vertex_api_key
+```
+
+### Factory client (client.py)
+
+```python
+from google import genai
+import os, json, logging
+
+logger = logging.getLogger(__name__)
+
+def get_ai_client() -> genai.Client:
+    provider = os.environ.get("AI_PROVIDER", "google_ai_studio")
+    logger.info(f"Initialisation client IA", extra={"provider": provider})
+
+    if provider == "google_ai_studio":
+        # Option A — Google AI Studio, clé AIza
+        return genai.Client(
+            api_key=os.environ["GOOGLE_AI_STUDIO_API_KEY"]
+        )
+
+    elif provider == "vertex_api_key":
+        # Option B — Vertex Express, clé AQ.Ab
+        # SYNTAXE EXACTE À VALIDER EN SPRINT 2 SESSION A
+        # Tester approche 1 en premier :
+        return genai.Client(
+            api_key=os.environ["VERTEX_API_KEY"]
+        )
+        # Si approche 1 échoue, tester approche 2 :
+        # return genai.Client(
+        #     api_key=os.environ["VERTEX_API_KEY"],
+        #     http_options={"api_version": "v1beta"}
+        # )
+
+    elif provider == "vertex_service_account":
+        # Option C — Vertex avec compte de service JSON
+        creds_json = os.environ["VERTEX_SERVICE_ACCOUNT_JSON"]
+        creds_dict = json.loads(creds_json)
+        return genai.Client(
+            vertexai=True,
+            project=os.environ["VERTEX_PROJECT_ID"],
+            location=os.environ.get("VERTEX_LOCATION", "europe-west1"),
+            credentials=creds_dict,
+        )
+
+    raise ValueError(f"AI_PROVIDER inconnu : {provider!r}. "
+                     "Valeurs acceptées : google_ai_studio, vertex_api_key, vertex_service_account")
+```
+
+### Listage des modèles disponibles (models.py)
+
+```python
+def list_available_models(client: genai.Client) -> list[dict]:
+    """
+    Retourne les modèles disponibles supportant vision + generateContent.
+    Format : [{"id": str, "display_name": str, "supports_vision": bool}]
+    """
+    models = []
+    for model in client.models.list():
+        # Garder uniquement les modèles multimodaux
+        supported = getattr(model, "supported_generation_methods", [])
+        if "generateContent" not in supported:
+            continue
+        # Vérifier le support vision (input_token_limit et modalities)
+        modalities = getattr(model, "supported_actions", None) or []
+        supports_vision = "image" in str(model).lower() or "vision" in str(model.name).lower()
+        models.append({
+            "id": model.name,
+            "display_name": getattr(model, "display_name", model.name),
+            "supports_vision": supports_vision,
+        })
+    return models
+```
+
+---
+
+## 10. Structure des exports documentaires
+
+### ALTO (par page)
+
+ALTO contient la géométrie textuelle uniquement.
+```xml
+<alto>
+  <Layout>
+    <Page WIDTH="{width}" HEIGHT="{height}" ID="{page_id}">
+      <PrintSpace>
+        <!-- Pour chaque région de type text_block -->
+        <TextBlock ID="{region.id}"
+                   HPOS="{bbox[0]}" VPOS="{bbox[1]}"
+                   WIDTH="{bbox[2]}" HEIGHT="{bbox[3]}">
+          <TextLine>
+            <String CONTENT="{text}" WC="{confidence}"/>
+          </TextLine>
+        </TextBlock>
+        <!-- Pour chaque région de type miniature -->
+        <Illustration ID="{region.id}"
+                      HPOS="{bbox[0]}" VPOS="{bbox[1]}"
+                      WIDTH="{bbox[2]}" HEIGHT="{bbox[3]}"/>
+      </PrintSpace>
+    </Page>
+  </Layout>
+</alto>
+```
+
+ALTO ne porte PAS : commentaires savants, iconographie, couches éditoriales.
+
+### IIIF Manifest (par manuscrit)
+
+Structure minimale V1 :
+```json
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+  "id": "https://{base_url}/api/v1/manuscripts/{id}/iiif-manifest",
+  "type": "Manifest",
+  "label": {"fr": ["{manuscript.title}"]},
+  "metadata": [],
+  "items": [
+    {
+      "id": "https://{base_url}/canvas/{page_id}",
+      "type": "Canvas",
+      "width": "{image.width}",
+      "height": "{image.height}",
+      "items": [{"type": "AnnotationPage", "items": [
+        {"type": "Annotation", "motivation": "painting",
+         "body": {"type": "Image", "id": "{image.derivative_web}",
+                  "format": "image/jpeg",
+                  "width": "{image.width}", "height": "{image.height}"},
+         "target": "https://{base_url}/canvas/{page_id}"}
+      ]}]
+    }
+  ]
+}
+```
+
+---
+
+## 11. Statuts métier
+
+```
+Corpus  : CREATED → INGESTING → INGESTED → PROCESSING → READY → ERROR
+Page    : INGESTED → PREPARED → ANALYZED → LAYERED → EXPORTED → VALIDATED → ERROR
+Layer   : PENDING → RUNNING → DONE → FAILED → NEEDS_REVIEW → VALIDATED
+Éditorial: machine_draft → needs_review → reviewed → validated → published
+```
+
+---
+
+## 12. Endpoints API — liste complète
+
+```
+# Configuration & modèles IA
+POST   /api/v1/settings/api-key
+GET    /api/v1/models
 POST   /api/v1/models/refresh
 PUT    /api/v1/corpora/{id}/model
 GET    /api/v1/corpora/{id}/model
@@ -616,43 +918,42 @@ GET    /api/v1/manuscripts/{id}/search?q=
 
 ---
 
-## 12. État du projet par sprint
+## 13. État du projet par sprint
 
 ```
-Sprint 1 — Fondations du modèle de données        [ EN COURS ]
-  → Schémas Pydantic + tests pytest + profils JSON + templates prompts
+Sprint 1 — Fondations du modèle de données        
+  54 tests passants. Schémas Pydantic. 4 profils. 9 templates prompts.
 
-Sprint 2 — Pipeline page unique                    [ À FAIRE ]
-  → Ingestion + appel Google AI + master.json
+Sprint 2 — Pipeline page unique                    
+  Connexion Google AI validée → ingestion image → master.json
 
-Sprint 3 — Exports documentaires                   [ À FAIRE ]
-  → ALTO + METS + Manifest IIIF
+Sprint 3 — Exports documentaires                   
+  ALTO par page + METS + Manifest IIIF
 
-Sprint 4 — API FastAPI + interface de lecture       [ À FAIRE ]
-  → Endpoints + visionneuse + 4 couches
+Sprint 4 — API FastAPI + interface de lecture       
+  Endpoints + visionneuse OpenSeadragon + 4 couches
 
-Sprint 5 — Traitement en lot + HuggingFace         [ À FAIRE ]
-  → Pipeline batch + déploiement public
+Sprint 5 — Traitement en lot + HuggingFace         
+  Pipeline batch + déploiement public
 
-Sprint 6 — Validation humaine + V1 complète        [ À FAIRE ]
-  → Éditeur + versionnement + recherche
+Sprint 6 — Validation humaine + V1 complète       
+  Éditeur + versionnement + recherche
 ```
 
-**Règle :** ne jamais implémenter du code appartenant à un sprint ultérieur
-au sprint en cours. Si une idée émerge pour un sprint futur, la noter
-dans TODO.md section "Backlog" et ne pas la coder.
+**Règle stricte** : ne jamais implémenter du code d'un sprint futur.
+Si une idée émerge, la noter dans STATUS.md section "Backlog" et ne pas la coder.
 
 ---
 
-## 13. Ce que tu NE dois PAS faire sans demande explicite
+## 14. Ce que tu NE dois PAS faire sans demande explicite
 
 - Modifier le schéma PageMaster (champs, types, noms, structure)
 - Modifier la convention bbox
-- Ajouter des dépendances non listées dans pyproject.toml
-- Refactoriser du code existant si la session n'a pas ce but explicite
-- Créer des fichiers hors de l'arborescence définie section 3
-- Implémenter du code de sprint futur (voir section 12)
-- Simplifier un schéma pour "faire plus propre" — les schémas sont figés
-- Changer une règle listée en section 5 pour une raison de commodité
-- Utiliser une librairie alternative à celles listées section 2
-- Créer une logique spécifique à un corpus particulier
+- Ajouter des dépendances non listées dans pyproject.toml section 2
+- Refactoriser du code existant si la session n'a pas ce but
+- Créer des fichiers hors de l'arborescence section 3
+- Implémenter du code d'un sprint futur (section 13)
+- "Simplifier" un schéma pour "faire plus propre" — les schémas sont figés
+- Créer une logique spécifique à un corpus (règle R01)
+- Utiliser google-generativeai au lieu de google-genai (règle R11)
+- Laisser une variable d'environnement dans le code (règle R06)
