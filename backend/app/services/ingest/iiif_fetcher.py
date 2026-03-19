@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 60.0  # secondes — les images IIIF haute résolution peuvent être lourdes
 
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (compatible; ScriptoriumAI/1.0; "
+        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
+    ),
+    "Accept": "image/jpeg,image/png,image/*,*/*",
+    "Referer": "https://gallica.bnf.fr/",
+}
+
 
 def fetch_iiif_image(url: str, timeout: float = _DEFAULT_TIMEOUT) -> bytes:
     """Télécharge une image depuis une URL IIIF complète.
@@ -28,7 +37,7 @@ def fetch_iiif_image(url: str, timeout: float = _DEFAULT_TIMEOUT) -> bytes:
         httpx.RequestError: pour toute autre erreur réseau.
     """
     logger.info("Fetching IIIF image", extra={"url": url})
-    response = httpx.get(url, follow_redirects=True, timeout=timeout)
+    response = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=timeout)
     response.raise_for_status()
     logger.info(
         "IIIF image fetched",
