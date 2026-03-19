@@ -112,10 +112,20 @@ async def _create_page(
     return page
 
 
+_MANIFEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (compatible; ScriptoriumAI/1.0; "
+        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
+    ),
+    "Accept": "application/ld+json,application/json,*/*",
+    "Referer": "https://gallica.bnf.fr/",
+}
+
+
 async def _fetch_json_manifest(url: str) -> dict:
     """Télécharge un manifest IIIF. Fonction isolée pour faciliter les tests."""
     async with httpx.AsyncClient() as client:
-        resp = await client.get(url, follow_redirects=True, timeout=30.0)
+        resp = await client.get(url, headers=_MANIFEST_HEADERS, follow_redirects=True, timeout=30.0)
         resp.raise_for_status()
         return resp.json()
 

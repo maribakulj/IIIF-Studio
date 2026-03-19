@@ -272,6 +272,14 @@ def test_fetch_iiif_image_success():
     assert result == fake_bytes
     mock_get.assert_called_once_with(
         "https://example.com/image.jpg",
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (compatible; ScriptoriumAI/1.0; "
+                "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
+            ),
+            "Accept": "image/jpeg,image/png,image/*,*/*",
+            "Referer": "https://gallica.bnf.fr/",
+        },
         follow_redirects=True,
         timeout=60.0,
     )
