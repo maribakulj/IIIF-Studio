@@ -85,7 +85,12 @@ def run_primary_analysis(
     )
 
     # ── 2. Chargement de l'image dérivée ────────────────────────────────────
-    jpeg_bytes = derivative_image_path.read_bytes()
+    if not derivative_image_path.exists():
+        raise FileNotFoundError(f"Image dérivée introuvable : {derivative_image_path}")
+    try:
+        jpeg_bytes = derivative_image_path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(f"Erreur lecture image {derivative_image_path} : {exc}") from exc
 
     # ── 3. Appel IA via le provider sélectionné ─────────────────────────────
     provider = get_provider(model_config.provider)

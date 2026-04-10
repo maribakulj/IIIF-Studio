@@ -249,6 +249,7 @@ async def ingest_files(
     dupes = _find_duplicate_labels(labels)
 
     created: list[PageModel] = []
+    written_files: list[Path] = []
     skipped = 0
     for i, upload in enumerate(files):
         # Validation MIME type
@@ -281,6 +282,7 @@ async def ingest_files(
         master_dir.mkdir(parents=True, exist_ok=True)
         master_path = master_dir / filename
         master_path.write_bytes(content)
+        written_files.append(master_path)
 
         page = await _create_page(
             db, ms.id, page_id, folio_label, seq + i,
@@ -292,7 +294,13 @@ async def ingest_files(
             created.append(page)
 
     ms.total_pages = (ms.total_pages or 0) + len(created)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        # Nettoyage des fichiers orphelins si le commit BDD échoue
+        for f in written_files:
+            f.unlink(missing_ok=True)
+        raise
 
     logger.info(
         "Fichiers ingérés",

@@ -8,6 +8,7 @@ Les profils sont des fichiers JSON dans profiles/ (racine du dépôt).
 Ils sont validés par CorpusProfile avant d'être retournés.
 """
 # 1. stdlib
+import asyncio
 import json
 import logging
 import re
@@ -50,12 +51,16 @@ async def list_profiles() -> list[dict]:
     if not settings.profiles_dir.is_dir():
         logger.warning("profiles_dir introuvable : %s", settings.profiles_dir)
         return []
-    profiles = []
-    for path in sorted(settings.profiles_dir.glob("*.json")):
-        profile = _load_profile(path)
-        if profile is not None:
-            profiles.append(profile.model_dump())
-    return profiles
+
+    def _scan_profiles() -> list[dict]:
+        result = []
+        for path in sorted(settings.profiles_dir.glob("*.json")):
+            profile = _load_profile(path)
+            if profile is not None:
+                result.append(profile.model_dump())
+        return result
+
+    return await asyncio.to_thread(_scan_profiles)
 
 
 _SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -67,9 +72,15 @@ async def get_profile(profile_id: str) -> dict:
     if not _SAFE_ID_RE.match(profile_id):
         raise HTTPException(status_code=400, detail="profile_id invalide")
     path = settings.profiles_dir / f"{profile_id}.json"
-    if not path.exists():
+
+    def _read() -> CorpusProfile | None:
+        if not path.exists():
+            return None
+        return _load_profile(path)
+
+    profile = await asyncio.to_thread(_read)
+    if profile is None and not path.exists():
         raise HTTPException(status_code=404, detail="Profil introuvable")
-    profile = _load_profile(path)
     if profile is None:
         raise HTTPException(status_code=422, detail="Profil invalide")
     return profile.model_dump()

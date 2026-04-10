@@ -23,19 +23,27 @@ _PROVIDER_DISPLAY_NAMES: dict[ProviderType, str] = {
 }
 
 
+_cached_providers: list[AIProvider] | None = None
+
+
 def _build_providers() -> list[AIProvider]:
-    """Construit la liste des providers — imports différés."""
+    """Construit la liste des providers — imports différés, résultat mis en cache."""
+    global _cached_providers
+    if _cached_providers is not None:
+        return _cached_providers
+
     from app.services.ai.provider_google_ai import GoogleAIProvider
     from app.services.ai.provider_mistral import MistralProvider
     from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
     from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
 
-    return [
+    _cached_providers = [
         GoogleAIProvider(),
         VertexAPIKeyProvider(),
         VertexServiceAccountProvider(),
         MistralProvider(),
     ]
+    return _cached_providers
 
 
 def get_available_providers() -> list[dict]:

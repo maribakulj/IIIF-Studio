@@ -90,8 +90,15 @@ class VertexServiceAccountProvider(AIProvider):
             raise RuntimeError(f"Variable d'environnement manquante : {_ENV_KEY}")
         client = self._build_client()
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-        response = client.models.generate_content(
-            model=model_id,
-            contents=[image_part, prompt],
-        )
+        try:
+            response = client.models.generate_content(
+                model=model_id,
+                contents=[image_part, prompt],
+            )
+        except Exception as exc:
+            logger.error(
+                "Appel API Vertex AI échoué",
+                extra={"model": model_id, "error": str(exc)},
+            )
+            raise RuntimeError(f"Erreur API Vertex AI ({model_id}) : {exc}") from exc
         return response.text or ""
