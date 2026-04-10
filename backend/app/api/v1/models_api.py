@@ -25,11 +25,6 @@ from app.models.corpus import CorpusModel
 from app.models.database import get_db
 from app.models.model_config_db import ModelConfigDB
 from app.schemas.model_config import ProviderType
-from app.services.ai.model_registry import (
-    get_available_providers,
-    list_all_models,
-    list_models_for_provider,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +72,8 @@ async def list_providers() -> list[dict]:
     Un provider est disponible si la variable d'environnement correspondante
     est présente dans les secrets HuggingFace. Aucune clé n'est exposée.
     """
+    from app.services.ai.model_registry import get_available_providers
+
     return get_available_providers()
 
 
@@ -91,6 +88,8 @@ async def get_provider_models(provider_type: str) -> list[dict]:
             detail=f"Provider inconnu : {provider_type}. "
                    f"Valeurs acceptées : {[p.value for p in ProviderType]}",
         )
+    from app.services.ai.model_registry import list_models_for_provider
+
     try:
         models = list_models_for_provider(ptype)
     except RuntimeError as exc:
@@ -104,6 +103,8 @@ async def get_provider_models(provider_type: str) -> list[dict]:
 @router.post("/models/refresh", response_model=ModelsRefreshResponse)
 async def refresh_models() -> ModelsRefreshResponse:
     """Force la mise à jour de la liste agrégée de tous les modèles disponibles."""
+    from app.services.ai.model_registry import list_all_models
+
     models = list_all_models()
     return ModelsRefreshResponse(
         models=[m.model_dump() for m in models],

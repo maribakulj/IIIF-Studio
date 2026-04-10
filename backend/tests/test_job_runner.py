@@ -142,16 +142,24 @@ def _page_master(page_id: str, ms_id: str) -> PageMaster:
 
 
 def _apply_success_mocks(monkeypatch, page_id: str, ms_id: str) -> None:
-    """Applique les mocks IO pour un pipeline réussi."""
+    """Applique les mocks IO pour un pipeline réussi.
+
+    Les imports sont différés dans job_runner (lazy imports). On patche donc
+    les modules sources pour que le import dans la fonction cible récupère le mock.
+    """
     monkeypatch.setattr(
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: _page_master(page_id, ms_id),
     )
-    monkeypatch.setattr(job_runner_module, "generate_alto", lambda pm: "<alto/>")
-    monkeypatch.setattr(job_runner_module, "write_alto", lambda xml, path: None)
+    monkeypatch.setattr(
+        "app.services.export.alto.generate_alto", lambda pm: "<alto/>"
+    )
+    monkeypatch.setattr(
+        "app.services.export.alto.write_alto", lambda xml, path: None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +282,7 @@ async def test_no_image_path_job_failed(db, setup_with_model, monkeypatch):
     s["page"].image_master_path = None
     await db.commit()
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: _page_master(s["page"].id, s["ms"].id),
     )
 
@@ -291,7 +299,7 @@ async def test_no_image_path_page_error(db, setup_with_model, monkeypatch):
     s["page"].image_master_path = None
     await db.commit()
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: _page_master(s["page"].id, s["ms"].id),
     )
 
@@ -343,7 +351,7 @@ async def test_primary_analysis_fails_job_failed(db, setup_with_model, monkeypat
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: (_ for _ in ()).throw(ValueError("ParseError: invalid JSON")),
     )
 
@@ -361,7 +369,7 @@ async def test_primary_analysis_fails_page_error(db, setup_with_model, monkeypat
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: (_ for _ in ()).throw(ValueError("ParseError: invalid JSON")),
     )
 
@@ -379,7 +387,7 @@ async def test_primary_analysis_error_message_stored(db, setup_with_model, monke
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: (_ for _ in ()).throw(ValueError("ParseError: invalid JSON")),
     )
 
@@ -401,12 +409,14 @@ async def test_write_alto_fails_job_failed(db, setup_with_model, monkeypatch):
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: _page_master(s["page"].id, s["ms"].id),
     )
-    monkeypatch.setattr(job_runner_module, "generate_alto", lambda pm: "<alto/>")
     monkeypatch.setattr(
-        job_runner_module, "write_alto",
+        "app.services.export.alto.generate_alto", lambda pm: "<alto/>"
+    )
+    monkeypatch.setattr(
+        "app.services.export.alto.write_alto",
         lambda xml, path: (_ for _ in ()).throw(OSError("disk full")),
     )
 
@@ -424,12 +434,14 @@ async def test_write_alto_fails_page_error(db, setup_with_model, monkeypatch):
         job_runner_module, "fetch_and_normalize", lambda *a: _image_info()
     )
     monkeypatch.setattr(
-        job_runner_module, "run_primary_analysis",
+        "app.services.ai.analyzer.run_primary_analysis",
         lambda **kw: _page_master(s["page"].id, s["ms"].id),
     )
-    monkeypatch.setattr(job_runner_module, "generate_alto", lambda pm: "<alto/>")
     monkeypatch.setattr(
-        job_runner_module, "write_alto",
+        "app.services.export.alto.generate_alto", lambda pm: "<alto/>"
+    )
+    monkeypatch.setattr(
+        "app.services.export.alto.write_alto",
         lambda xml, path: (_ for _ in ()).throw(OSError("disk full")),
     )
 
@@ -534,7 +546,7 @@ async def test_corpus_runner_calls_execute_per_job(monkeypatch):
         return _FakeSession()
 
     monkeypatch.setattr(corpus_runner_module, "async_session_factory", _mock_factory)
-    monkeypatch.setattr(corpus_runner_module, "execute_page_job", _mock_execute)
+    monkeypatch.setattr("app.services.job_runner.execute_page_job", _mock_execute)
 
     await execute_corpus_job("corpus-xyz")
 

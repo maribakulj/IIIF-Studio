@@ -13,7 +13,7 @@ from pathlib import Path
 from app.schemas.corpus_profile import CorpusProfile
 from app.schemas.image import ImageDerivativeInfo
 from app.schemas.model_config import ModelConfig
-from app.schemas.page_master import EditorialInfo, EditorialStatus, PageMaster, ProcessingInfo
+from app.schemas.page_master import EditorialInfo, EditorialStatus, ImageInfo, PageMaster, ProcessingInfo
 from app.services.ai.master_writer import write_gemini_raw, write_master_json
 from app.services.ai.model_registry import get_provider
 from app.services.ai.prompt_loader import load_and_render_prompt
@@ -118,16 +118,17 @@ def run_primary_analysis(
         manuscript_id=manuscript_id,
         folio_label=folio_label,
         sequence=sequence,
-        image={
-            "original_url": image_info.original_url,
-            "derivative_web": image_info.derivative_path,
-            "thumbnail": image_info.thumbnail_path,
-            "width": image_info.derivative_width,
-            "height": image_info.derivative_height,
-        },
+        image=ImageInfo(
+            master=image_info.original_url,
+            derivative_web=image_info.derivative_path,
+            thumbnail=image_info.thumbnail_path,
+            width=image_info.derivative_width,
+            height=image_info.derivative_height,
+        ),
         layout=layout,
         ocr=ocr,
         processing=ProcessingInfo(
+            provider=model_config.provider.value if hasattr(model_config.provider, "value") else str(model_config.provider),
             model_id=model_config.selected_model_id,
             model_display_name=model_config.selected_model_display_name,
             prompt_version=prompt_rel_path,

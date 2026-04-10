@@ -52,6 +52,7 @@ def _make_master(
     processing = None
     if with_processing:
         processing = ProcessingInfo(
+            provider="google_ai_studio",
             model_id="gemini-2.0-flash",
             model_display_name="Gemini 2.0 Flash",
             prompt_version="prompts/medieval-illuminated/primary_v1.txt",
@@ -65,7 +66,7 @@ def _make_master(
         folio_label="0001r",
         sequence=sequence,
         image={
-            "original_url": "https://example.com/img.jpg",
+            "master": "https://example.com/img.jpg",
             "derivative_web": "/data/deriv.jpg",
             "thumbnail": "/data/thumb.jpg",
             "width": width,

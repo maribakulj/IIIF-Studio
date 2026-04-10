@@ -102,12 +102,12 @@ def generate_manifest(
         canvas_id = (
             f"{base_url}/api/v1/manuscripts/{manuscript_id}/canvas/{page.page_id}"
         )
-        width  = int(page.image.get("width",  0))
-        height = int(page.image.get("height", 0))
+        width  = page.image.width
+        height = page.image.height
 
         annotation_page_id = f"{canvas_id}/annotation-page/1"
         annotation_id      = f"{canvas_id}/annotation/painting"
-        image_url          = page.image.get("original_url", "")
+        image_url          = page.image.master or ""
 
         canvas: dict = {
             "id":     canvas_id,

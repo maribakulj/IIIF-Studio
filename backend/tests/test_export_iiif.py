@@ -53,7 +53,7 @@ def _make_page(
         folio_label=folio_label,
         sequence=sequence,
         image={
-            "original_url": original_url or f"https://example.com/{folio_label}.jpg",
+            "master": original_url or f"https://example.com/{folio_label}.jpg",
             "derivative_web": f"/data/deriv/{folio_label}.jpg",
             "thumbnail": f"/data/thumb/{folio_label}.jpg",
             "width": width,
@@ -344,7 +344,7 @@ def test_canvas_width_matches_image(beatus_pages, beatus_meta):
         # Trouve la page correspondante
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
-        assert canvas["width"] == page.image["width"]
+        assert canvas["width"] == page.image.width
 
 
 def test_canvas_height_matches_image(beatus_pages, beatus_meta):
@@ -352,7 +352,7 @@ def test_canvas_height_matches_image(beatus_pages, beatus_meta):
     for canvas in manifest["items"]:
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
-        assert canvas["height"] == page.image["height"]
+        assert canvas["height"] == page.image.height
 
 
 def test_canvas_dimensions_beatus_hr():
@@ -447,7 +447,7 @@ def test_annotation_body_id_is_original_url(beatus_pages, beatus_meta):
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
         body = canvas["items"][0]["items"][0]["body"]
-        assert body["id"] == page.image["original_url"]
+        assert body["id"] == page.image.master
 
 
 def test_annotation_body_contains_gallica_url(beatus_pages, beatus_meta):

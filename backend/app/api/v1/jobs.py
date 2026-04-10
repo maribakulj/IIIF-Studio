@@ -22,8 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.corpus import CorpusModel, ManuscriptModel, PageModel
 from app.models.database import get_db
 from app.models.job import JobModel
-from app.services.corpus_runner import execute_corpus_job
-from app.services.job_runner import execute_page_job
 
 router = APIRouter(tags=["jobs"])
 
@@ -101,6 +99,8 @@ async def run_corpus(
     await db.commit()
 
     # Lancer le pipeline en arrière-plan (après envoi de la réponse)
+    from app.services.corpus_runner import execute_corpus_job
+
     background_tasks.add_task(execute_corpus_job, corpus_id)
 
     return CorpusRunResponse(
@@ -135,6 +135,8 @@ async def run_page(
     await db.refresh(job)
 
     # Lancer le pipeline en arrière-plan (après envoi de la réponse)
+    from app.services.job_runner import execute_page_job
+
     background_tasks.add_task(execute_page_job, job.id)
 
     return job
@@ -175,6 +177,8 @@ async def retry_job(
     await db.refresh(job)
 
     # Relancer le pipeline
+    from app.services.job_runner import execute_page_job
+
     background_tasks.add_task(execute_page_job, job.id)
 
     return job

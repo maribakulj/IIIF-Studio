@@ -29,12 +29,23 @@ class Region(BaseModel):
 
     @field_validator("bbox")
     @classmethod
-    def bbox_must_be_positive(cls, v: list[int]) -> list[int]:
+    def bbox_must_be_valid(cls, v: list[int]) -> list[int]:
         if any(x < 0 for x in v):
-            raise ValueError("bbox values must be >= 0")
+            raise ValueError("bbox: toutes les valeurs doivent être >= 0")
         if v[2] <= 0 or v[3] <= 0:
-            raise ValueError("bbox width and height must be > 0")
+            raise ValueError("bbox: width et height doivent être > 0")
         return v
+
+
+class ImageInfo(BaseModel):
+    """Métadonnées image — CLAUDE.md §4.2."""
+
+    master: str
+    derivative_web: str | None = None
+    thumbnail: str | None = None
+    iiif_base: str | None = None
+    width: int
+    height: int
 
 
 class OCRResult(BaseModel):
@@ -51,6 +62,13 @@ class Translation(BaseModel):
     en: str = ""
 
 
+class Summary(BaseModel):
+    """Résumé — CLAUDE.md §4.2."""
+
+    short: str = ""
+    detailed: str = ""
+
+
 class CommentaryClaim(BaseModel):
     claim: str
     evidence_region_ids: list[str] = []
@@ -64,6 +82,7 @@ class Commentary(BaseModel):
 
 
 class ProcessingInfo(BaseModel):
+    provider: str
     model_id: str
     model_display_name: str
     prompt_version: str
@@ -96,11 +115,11 @@ class PageMaster(BaseModel):
     folio_label: str
     sequence: int
 
-    image: dict
+    image: ImageInfo
     layout: dict
     ocr: OCRResult | None = None
     translation: Translation | None = None
-    summary: dict | None = None
+    summary: Summary | None = None
     commentary: Commentary | None = None
     extensions: dict[str, Any] = {}
 

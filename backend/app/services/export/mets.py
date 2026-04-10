@@ -182,7 +182,7 @@ def generate_mets(
         f_master = _el(grp_master, f"{_M}file", {"ID": f"IMG_MASTER_{sid}", "MIMETYPE": "image/jpeg"})
         _el(f_master, f"{_M}FLocat", {
             "LOCTYPE": "URL",
-            f"{_XL}href": page.image.get("original_url", ""),
+            f"{_XL}href": page.image.master or "",
             f"{_XL}type": "simple",
         })
 
@@ -191,7 +191,7 @@ def generate_mets(
         _el(f_deriv, f"{_M}FLocat", {
             "LOCTYPE": "OTHER",
             "OTHERLOCTYPE": "filepath",
-            f"{_XL}href": page.image.get("derivative_web", ""),
+            f"{_XL}href": page.image.derivative_web or "",
             f"{_XL}type": "simple",
         })
 

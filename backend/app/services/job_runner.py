@@ -33,8 +33,6 @@ from app.models.job import JobModel
 from app.models.model_config_db import ModelConfigDB
 from app.schemas.corpus_profile import CorpusProfile
 from app.schemas.model_config import ModelConfig, ProviderType
-from app.services.ai.analyzer import run_primary_analysis
-from app.services.export.alto import generate_alto, write_alto
 from app.services.image.normalizer import create_derivatives, fetch_and_normalize
 
 logger = logging.getLogger(__name__)
@@ -148,6 +146,8 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             )
 
         # ── 6. Analyse primaire IA (R05 : double stockage) ───────────────────
+        from app.services.ai.analyzer import run_primary_analysis
+
         page_master = run_primary_analysis(
             derivative_image_path=Path(image_info.derivative_path),
             corpus_profile=corpus_profile,
@@ -163,6 +163,8 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
         )
 
         # ── 7. Générer et écrire l'ALTO XML ──────────────────────────────────
+        from app.services.export.alto import generate_alto, write_alto
+
         alto_xml = generate_alto(page_master)
         alto_path = (
             data_dir

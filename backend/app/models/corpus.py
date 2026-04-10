@@ -6,6 +6,7 @@ Ils NE se substituent PAS aux schémas Pydantic (source canonique des types).
 """
 # 1. stdlib
 from datetime import datetime, timezone
+from functools import partial
 
 # 2. third-party
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
@@ -24,8 +25,12 @@ class CorpusModel(Base):
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     profile_id: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=partial(datetime.now, tz=timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=partial(datetime.now, tz=timezone.utc)
+    )
 
     manuscripts: Mapped[list["ManuscriptModel"]] = relationship(
         back_populates="corpus", cascade="all, delete-orphan"

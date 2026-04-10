@@ -17,7 +17,6 @@ from sqlalchemy import select
 # 3. local
 from app.models.database import async_session_factory
 from app.models.job import JobModel
-from app.services.job_runner import execute_page_job
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +53,8 @@ async def execute_corpus_job(corpus_id: str) -> dict:
     )
 
     # Exécution séquentielle — chaque job gère sa propre session
+    from app.services.job_runner import execute_page_job
+
     for job_id in job_ids:
         await execute_page_job(job_id)
 

@@ -75,7 +75,7 @@ def _make_master(
         "manuscript_id": "ms-test",
         "folio_label": "f001r",
         "sequence": 1,
-        "image": {"original_url": "https://example.com/f.jpg", "width": 1500, "height": 2000},
+        "image": {"master": "https://example.com/f.jpg", "width": 1500, "height": 2000},
         "layout": {"regions": []},
         "ocr": {
             "diplomatic_text": "Incipit liber primus",

@@ -66,6 +66,7 @@ def _make_page(
     processing = None
     if with_processing:
         processing = ProcessingInfo(
+            provider="google_ai_studio",
             model_id="gemini-2.0-flash",
             model_display_name="Gemini 2.0 Flash",
             prompt_version="prompts/medieval-illuminated/primary_v1.txt",
@@ -80,7 +81,7 @@ def _make_page(
         folio_label=folio_label,
         sequence=sequence,
         image={
-            "original_url": original_url or f"https://example.com/{folio_label}.jpg",
+            "master": original_url or f"https://example.com/{folio_label}.jpg",
             "derivative_web": derivative_web or f"/data/deriv/{folio_label}.jpg",
             "thumbnail": f"/data/thumb/{folio_label}.jpg",
             "width": 1500,

@@ -94,7 +94,7 @@ async def test_get_models_endpoint_removed(async_client):
 @pytest.mark.asyncio
 async def test_refresh_models_ok(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_all_models", lambda: _MOCK_MODELS
+        "app.services.ai.model_registry.list_all_models", lambda: _MOCK_MODELS
     )
     response = await async_client.post("/api/v1/models/refresh")
     assert response.status_code == 200
@@ -103,7 +103,7 @@ async def test_refresh_models_ok(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_refresh_models_has_timestamp(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_all_models", lambda: _MOCK_MODELS
+        "app.services.ai.model_registry.list_all_models", lambda: _MOCK_MODELS
     )
     data = (await async_client.post("/api/v1/models/refresh")).json()
     assert "refreshed_at" in data
@@ -113,7 +113,7 @@ async def test_refresh_models_has_timestamp(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_refresh_models_count(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_all_models", lambda: _MOCK_MODELS
+        "app.services.ai.model_registry.list_all_models", lambda: _MOCK_MODELS
     )
     data = (await async_client.post("/api/v1/models/refresh")).json()
     assert data["count"] == 2
@@ -123,7 +123,7 @@ async def test_refresh_models_count(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_refresh_models_structure(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_all_models", lambda: _MOCK_MODELS
+        "app.services.ai.model_registry.list_all_models", lambda: _MOCK_MODELS
     )
     data = (await async_client.post("/api/v1/models/refresh")).json()
     assert "models" in data

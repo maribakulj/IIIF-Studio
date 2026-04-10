@@ -1,17 +1,17 @@
 """
 Configuration globale de la plateforme, chargée depuis les variables d'environnement.
 
-Équivalent fonctionnel de pydantic-settings sans dépendance externe :
-  - les valeurs sont lues depuis os.environ au moment de l'instanciation
+Utilise pydantic-settings (CLAUDE.md §2, §7) :
+  - les valeurs sont lues depuis os.environ / fichier .env au moment de l'instanciation
   - l'objet `settings` est importé partout dans l'application
   - dans les tests : monkeypatch.setattr(config, "settings", ...) pour surcharger
 """
 # 1. stdlib
-import os
 from pathlib import Path
 
 # 2. third-party
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
 
 # Racine du dépôt — résolue depuis l'emplacement absolu de ce fichier.
 # config.py se trouve dans backend/app/ ; 3 parents remontent à la racine.
@@ -19,14 +19,17 @@ from pydantic import BaseModel, ConfigDict
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Paramètres d'application lus depuis les variables d'environnement.
 
     Toutes les clés API sont optionnelles (None si non configurées).
     Elles ne sont jamais loguées ni exportées (R06).
     """
 
-    model_config = ConfigDict(frozen=False)
+    model_config = ConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
 
     # ── Serveur ──────────────────────────────────────────────────────────────
     base_url: str = "http://localhost:8000"
@@ -50,21 +53,4 @@ class Settings(BaseModel):
     mistral_api_key: str | None = None
 
 
-def _load_settings() -> Settings:
-    """Lit les variables d'environnement et construit l'objet Settings."""
-    return Settings(
-        base_url=os.getenv("BASE_URL", "http://localhost:8000"),
-        data_dir=Path(os.getenv("DATA_DIR", "data")),
-        profiles_dir=Path(os.getenv("PROFILES_DIR", str(_REPO_ROOT / "profiles"))),
-        prompts_dir=Path(os.getenv("PROMPTS_DIR", str(_REPO_ROOT / "prompts"))),
-        database_url=os.getenv(
-            "DATABASE_URL", "sqlite+aiosqlite:///./scriptorium.db"
-        ),
-        google_ai_studio_api_key=os.getenv("GOOGLE_AI_STUDIO_API_KEY"),
-        vertex_api_key=os.getenv("VERTEX_API_KEY"),
-        vertex_service_account_json=os.getenv("VERTEX_SERVICE_ACCOUNT_JSON"),
-        mistral_api_key=os.getenv("MISTRAL_API_KEY"),
-    )
-
-
-settings: Settings = _load_settings()
+settings: Settings = Settings()

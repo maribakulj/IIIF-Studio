@@ -432,7 +432,7 @@ def _make_page_master() -> PageMaster:
         folio_label="0001r",
         sequence=1,
         image={
-            "original_url": "https://example.com/img.jpg",
+            "master": "https://example.com/img.jpg",
             "derivative_web": "/data/deriv.jpg",
             "thumbnail": "/data/thumb.jpg",
             "width": 1500,
@@ -440,6 +440,7 @@ def _make_page_master() -> PageMaster:
         },
         layout={"regions": []},
         processing={
+            "provider": "google_ai_studio",
             "model_id": "gemini-2.0-flash",
             "model_display_name": "Gemini 2.0 Flash",
             "prompt_version": "prompts/medieval-illuminated/primary_v1.txt",
@@ -663,9 +664,9 @@ def test_run_primary_analysis_image_dict(tmp_path):
             project_root=tmp_path,
         )
 
-    assert result.image["original_url"] == image_info.original_url
-    assert result.image["width"] == image_info.derivative_width
-    assert result.image["height"] == image_info.derivative_height
+    assert result.image.master == image_info.original_url
+    assert result.image.width == image_info.derivative_width
+    assert result.image.height == image_info.derivative_height
 
 
 def test_run_primary_analysis_regions_in_layout(tmp_path):
