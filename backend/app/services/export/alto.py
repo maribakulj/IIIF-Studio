@@ -1,7 +1,7 @@
 """
 Générateur ALTO v4 depuis un PageMaster validé (R02).
 
-Source canonique : PageMaster uniquement — jamais la réponse brute gemini_raw.json.
+Source canonique : PageMaster uniquement — jamais la réponse brute ai_raw.json.
 bbox [x, y, width, height] → HPOS / VPOS / WIDTH / HEIGHT (correspondance directe).
 
 Mapping RegionType → élément ALTO :
@@ -82,7 +82,7 @@ def _build_text_block(
         text = fallback_text
 
     if not text:
-        return  # TextBlock vide — valide ALTO
+        return  # TextBlock sans TextLine — valide ALTO, région visible dans le layout
 
     x, y, w, h = region.bbox
     line_el = etree.SubElement(

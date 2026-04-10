@@ -193,11 +193,11 @@ def test_manifest_label_uses_language_key(simple_manifest):
 
 
 def test_manifest_label_without_language_uses_none():
-    """Sans champ language, la clé de label est 'none'."""
+    """Sans champ language, la clé de label est 'en' (défaut IIIF-compliant)."""
     pages = [_make_page("ms-0001r", "0001r", 1)]
-    meta = _base_meta()  # pas de language
+    meta = _base_meta()  # pas de language → défaut "en"
     manifest = generate_manifest(pages, meta, _BASE_URL)
-    assert "none" in manifest["label"]
+    assert "en" in manifest["label"]
 
 
 def test_manifest_label_fr(chroniques_pages, chroniques_meta):
@@ -272,7 +272,7 @@ def test_canvas_order_respects_sequence():
         _make_page("ms-f002r", "f002r", 2),
     ]
     manifest = generate_manifest(pages, _base_meta(), _BASE_URL)
-    labels = [c["label"]["none"][0] for c in manifest["items"]]
+    labels = [c["label"]["en"][0] for c in manifest["items"]]
     assert labels == ["Folio f001r", "Folio f002r", "Folio f003r"]
 
 
@@ -283,7 +283,7 @@ def test_canvas_order_large_sequence():
     random.shuffle(pages)
     manifest = generate_manifest(pages, _base_meta(), _BASE_URL)
     sequences_in_label = [
-        int(c["label"]["none"][0].replace("Folio f", "").replace("r", ""))
+        int(c["label"]["en"][0].replace("Folio f", "").replace("r", ""))
         for c in manifest["items"]
     ]
     assert sequences_in_label == list(range(1, 11))

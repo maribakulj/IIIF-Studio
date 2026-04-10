@@ -14,7 +14,7 @@ from app.schemas.corpus_profile import CorpusProfile
 from app.schemas.image import ImageDerivativeInfo
 from app.schemas.model_config import ModelConfig
 from app.schemas.page_master import EditorialInfo, EditorialStatus, ImageInfo, PageMaster, ProcessingInfo
-from app.services.ai.master_writer import write_gemini_raw, write_master_json
+from app.services.ai.master_writer import write_ai_raw, write_master_json
 from app.services.ai.model_registry import get_provider
 from app.services.ai.prompt_loader import load_and_render_prompt
 from app.services.ai.response_parser import ParseError, parse_ai_response  # noqa: F401
@@ -37,7 +37,7 @@ def run_primary_analysis(
 ) -> PageMaster:
     """Analyse primaire d'un folio : charge le prompt, appelle l'IA, écrit les fichiers.
 
-    Respecte R05 : gemini_raw.json est toujours écrit en premier, même en cas
+    Respecte R05 : ai_raw.json est toujours écrit en premier, même en cas
     d'erreur de parsing. master.json n'est écrit QUE si le parsing a réussi.
 
     Le provider est sélectionné dynamiquement depuis model_config.provider ;
@@ -57,7 +57,7 @@ def run_primary_analysis(
         project_root: racine du projet (pour résoudre les chemins des prompts).
 
     Returns:
-        PageMaster validé (gemini_raw.json et master.json écrits sur disque).
+        PageMaster validé (ai_raw.json et master.json écrits sur disque).
 
     Raises:
         ParseError: si la réponse IA n'est pas un JSON valide.
@@ -66,7 +66,7 @@ def run_primary_analysis(
     """
     # ── Chemins de sortie ───────────────────────────────────────────────────
     page_dir = base_data_dir / "corpora" / corpus_slug / "pages" / folio_label
-    raw_path = page_dir / "gemini_raw.json"
+    raw_path = page_dir / "ai_raw.json"
     master_path = page_dir / "master.json"
 
     # ── 1. Chargement et rendu du prompt (R04) ──────────────────────────────
@@ -76,6 +76,7 @@ def run_primary_analysis(
     context = {
         "profile_label": corpus_profile.label,
         "language_hints": ", ".join(corpus_profile.language_hints),
+        "primary_language": corpus_profile.language_hints[0] if corpus_profile.language_hints else "la",
         "script_type": corpus_profile.script_type.value,
     }
     prompt_text = load_and_render_prompt(prompt_abs_path, context)
@@ -109,8 +110,8 @@ def run_primary_analysis(
         model_id=model_config.selected_model_id,
     )
 
-    # ── 4. Écriture gemini_raw.json TOUJOURS EN PREMIER (R05) ───────────────
-    write_gemini_raw(raw_text, raw_path)
+    # ── 4. Écriture ai_raw.json TOUJOURS EN PREMIER (R05) ─────────────────
+    write_ai_raw(raw_text, raw_path)
 
     # ── 5. Parsing + validation (ParseError si JSON invalide) ───────────────
     layout, ocr = parse_ai_response(raw_text)

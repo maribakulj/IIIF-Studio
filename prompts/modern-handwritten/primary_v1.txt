@@ -28,7 +28,7 @@ Format de sortie JSON attendu :
     "diplomatic_text": "",
     "blocks": [],
     "lines": [],
-    "language": "fr",
+    "language": "{{primary_language}}",
     "confidence": 0.0,
     "uncertain_segments": []
   }

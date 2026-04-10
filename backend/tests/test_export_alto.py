@@ -56,7 +56,7 @@ def _make_master(
             model_id="gemini-2.0-flash",
             model_display_name="Gemini 2.0 Flash",
             prompt_version="prompts/medieval-illuminated/primary_v1.txt",
-            raw_response_path="/data/gemini_raw.json",
+            raw_response_path="/data/ai_raw.json",
             processed_at=datetime(2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
         )
     return PageMaster(

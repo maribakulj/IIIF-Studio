@@ -278,7 +278,6 @@ def test_fetch_iiif_image_success():
                 "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
             ),
             "Accept": "image/jpeg,image/png,image/*,*/*",
-            "Referer": "https://gallica.bnf.fr/",
         },
         follow_redirects=True,
         timeout=60.0,

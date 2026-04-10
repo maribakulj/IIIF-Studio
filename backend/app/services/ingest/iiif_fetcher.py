@@ -17,7 +17,6 @@ _HEADERS = {
         "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
     ),
     "Accept": "image/jpeg,image/png,image/*,*/*",
-    "Referer": "https://gallica.bnf.fr/",
 }
 
 

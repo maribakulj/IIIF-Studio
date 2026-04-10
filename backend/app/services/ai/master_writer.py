@@ -1,8 +1,8 @@
 """
-Écriture des fichiers gemini_raw.json et master.json (R02, R05).
+Écriture des fichiers ai_raw.json et master.json (R02, R05).
 
 Règle R05 non négociable :
-  1. gemini_raw.json est TOUJOURS écrit en premier.
+  1. ai_raw.json est TOUJOURS écrit en premier.
   2. master.json n'est écrit QUE si le parsing et la validation Pydantic ont réussi.
 """
 # 1. stdlib
@@ -16,8 +16,8 @@ from app.schemas.page_master import PageMaster
 logger = logging.getLogger(__name__)
 
 
-def write_gemini_raw(raw_text: str, output_path: Path) -> None:
-    """Écrit la réponse brute de l'IA dans gemini_raw.json (R05).
+def write_ai_raw(raw_text: str, output_path: Path) -> None:
+    """Écrit la réponse brute de l'IA dans ai_raw.json (R05).
 
     Toujours appelé AVANT toute tentative de parsing.
     Le contenu est enveloppé dans un objet JSON pour garantir un fichier valide,
@@ -31,9 +31,9 @@ def write_gemini_raw(raw_text: str, output_path: Path) -> None:
             encoding="utf-8",
         )
     except OSError as exc:
-        logger.error("Écriture gemini_raw.json échouée", extra={"path": str(output_path), "error": str(exc)})
+        logger.error("Écriture ai_raw.json échouée", extra={"path": str(output_path), "error": str(exc)})
         raise
-    logger.info("gemini_raw.json écrit", extra={"path": str(output_path)})
+    logger.info("ai_raw.json écrit", extra={"path": str(output_path)})
 
 
 def write_master_json(page_master: PageMaster, output_path: Path) -> None:

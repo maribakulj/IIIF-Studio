@@ -70,7 +70,7 @@ def _make_page(
             model_id="gemini-2.0-flash",
             model_display_name="Gemini 2.0 Flash",
             prompt_version="prompts/medieval-illuminated/primary_v1.txt",
-            raw_response_path=f"/data/corpora/test/pages/{folio_label}/gemini_raw.json",
+            raw_response_path=f"/data/corpora/test/pages/{folio_label}/ai_raw.json",
             processed_at=datetime(2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
         )
     ocr = OCRResult(diplomatic_text=ocr_text, language="la", confidence=0.90) if ocr_text else None

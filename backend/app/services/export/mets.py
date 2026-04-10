@@ -195,8 +195,13 @@ def generate_mets(
             f"{_XL}type": "simple",
         })
 
-        # ALTO
+        # ALTO (référence conditionnelle — warning si le fichier n'existe pas encore)
         alto_p = _alto_path(corpus_slug, page.folio_label, base_data_dir)
+        if not Path(alto_p).exists():
+            logger.warning(
+                "Fichier ALTO absent — la référence METS sera cassée tant que l'ALTO n'est pas généré",
+                extra={"alto_path": alto_p, "page_id": page.page_id},
+            )
         f_alto = _el(grp_alto, f"{_M}file", {"ID": f"ALTO_{sid}", "MIMETYPE": "text/xml"})
         _el(f_alto, f"{_M}FLocat", {
             "LOCTYPE": "OTHER",

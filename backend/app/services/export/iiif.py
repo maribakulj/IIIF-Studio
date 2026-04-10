@@ -74,7 +74,7 @@ def generate_manifest(
 
     manuscript_id = manuscript_meta["manuscript_id"]
     label         = manuscript_meta["label"]
-    language      = manuscript_meta.get("language") or "none"
+    language      = manuscript_meta.get("language") or "en"
 
     # Pages dans l'ordre de séquence (règle absolue — structMap PHYSICAL)
     pages = sorted(masters, key=lambda m: m.sequence)
@@ -112,7 +112,7 @@ def generate_manifest(
         canvas: dict = {
             "id":     canvas_id,
             "type":   "Canvas",
-            "label":  {"none": [f"Folio {page.folio_label}"]},
+            "label":  {language: [f"Folio {page.folio_label}"]},
             "width":  width,
             "height": height,
             "items": [

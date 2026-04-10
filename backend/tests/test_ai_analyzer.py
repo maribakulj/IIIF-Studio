@@ -3,7 +3,7 @@ Tests du pipeline d'analyse IA :
   - prompt_loader  : chargement + rendu des templates
   - client_factory : construction du genai.Client selon le provider
   - response_parser: parsing JSON brut → layout + OCRResult
-  - master_writer  : écriture gemini_raw.json et master.json
+  - master_writer  : écriture ai_raw.json et master.json
   - analyzer       : run_primary_analysis (end-to-end mocké)
 """
 # 1. stdlib
@@ -31,7 +31,7 @@ from app.schemas.model_config import ModelConfig, ProviderType
 from app.schemas.page_master import OCRResult, PageMaster
 from app.services.ai.analyzer import run_primary_analysis
 from app.services.ai.client_factory import build_client
-from app.services.ai.master_writer import write_gemini_raw, write_master_json
+from app.services.ai.master_writer import write_ai_raw, write_master_json
 from app.services.ai.prompt_loader import load_and_render_prompt
 from app.services.ai.response_parser import ParseError, parse_ai_response
 
@@ -390,35 +390,35 @@ def test_parse_empty_regions_list():
 
 
 # ---------------------------------------------------------------------------
-# Tests — write_gemini_raw / write_master_json
+# Tests — write_ai_raw / write_master_json
 # ---------------------------------------------------------------------------
 
-def test_write_gemini_raw_creates_file(tmp_path):
-    out = tmp_path / "page" / "gemini_raw.json"
-    write_gemini_raw("raw AI text here", out)
+def test_write_ai_raw_creates_file(tmp_path):
+    out = tmp_path / "page" / "ai_raw.json"
+    write_ai_raw("raw AI text here", out)
 
     assert out.exists()
 
 
-def test_write_gemini_raw_valid_json(tmp_path):
-    out = tmp_path / "gemini_raw.json"
-    write_gemini_raw('{"not": "valid json from AI"}', out)
+def test_write_ai_raw_valid_json(tmp_path):
+    out = tmp_path / "ai_raw.json"
+    write_ai_raw('{"not": "valid json from AI"}', out)
 
     content = json.loads(out.read_text(encoding="utf-8"))
     assert "response_text" in content
     assert content["response_text"] == '{"not": "valid json from AI"}'
 
 
-def test_write_gemini_raw_creates_parent_dirs(tmp_path):
-    out = tmp_path / "deep" / "nested" / "dir" / "gemini_raw.json"
-    write_gemini_raw("text", out)
+def test_write_ai_raw_creates_parent_dirs(tmp_path):
+    out = tmp_path / "deep" / "nested" / "dir" / "ai_raw.json"
+    write_ai_raw("text", out)
     assert out.exists()
 
 
-def test_write_gemini_raw_with_non_json_text(tmp_path):
-    """Même si le texte brut est invalide, gemini_raw.json est créé."""
-    out = tmp_path / "gemini_raw.json"
-    write_gemini_raw("this is not json at all", out)
+def test_write_ai_raw_with_non_json_text(tmp_path):
+    """Même si le texte brut est invalide, ai_raw.json est créé."""
+    out = tmp_path / "ai_raw.json"
+    write_ai_raw("this is not json at all", out)
 
     content = json.loads(out.read_text(encoding="utf-8"))
     assert content["response_text"] == "this is not json at all"
@@ -444,7 +444,7 @@ def _make_page_master() -> PageMaster:
             "model_id": "gemini-2.0-flash",
             "model_display_name": "Gemini 2.0 Flash",
             "prompt_version": "prompts/medieval-illuminated/primary_v1.txt",
-            "raw_response_path": "/data/gemini_raw.json",
+            "raw_response_path": "/data/ai_raw.json",
             "processed_at": datetime.now(tz=timezone.utc),
         },
     )
@@ -569,12 +569,12 @@ def test_run_primary_analysis_files_created(tmp_path):
         )
 
     page_dir = tmp_path / "data" / "corpora" / "test-corpus" / "pages" / "0001r"
-    assert (page_dir / "gemini_raw.json").exists()
+    assert (page_dir / "ai_raw.json").exists()
     assert (page_dir / "master.json").exists()
 
 
 def test_run_primary_analysis_raw_written_before_parse(tmp_path):
-    """gemini_raw.json est écrit AVANT que le parsing échoue (R05)."""
+    """ai_raw.json est écrit AVANT que le parsing échoue (R05)."""
     prompt_rel = "prompts/medieval-illuminated/primary_v1.txt"
     _setup_prompt_file(tmp_path, prompt_rel)
     deriv_path = _setup_derivative(tmp_path)
@@ -597,8 +597,8 @@ def test_run_primary_analysis_raw_written_before_parse(tmp_path):
                 project_root=tmp_path,
             )
 
-    # gemini_raw.json existe malgré l'échec de parsing
-    raw_path = tmp_path / "data" / "corpora" / "test-corpus" / "pages" / "0001r" / "gemini_raw.json"
+    # ai_raw.json existe malgré l'échec de parsing
+    raw_path = tmp_path / "data" / "corpora" / "test-corpus" / "pages" / "0001r" / "ai_raw.json"
     assert raw_path.exists()
 
     # master.json N'existe PAS (parsing a échoué)
