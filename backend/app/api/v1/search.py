@@ -95,7 +95,7 @@ def _score_master(data: dict, query_normalized: str) -> tuple[int, str]:
 
 @router.get("/search", response_model=list[SearchResult])
 async def search_pages(
-    q: str = Query(..., min_length=2, description="Requête de recherche (min. 2 caractères)"),
+    q: str = Query(..., min_length=2, max_length=500, description="Requête de recherche (2–500 caractères)"),
 ) -> list[SearchResult]:
     """Recherche plein texte dans les master.json de tous les corpus.
 

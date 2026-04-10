@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 # 2. third-party
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,9 +29,9 @@ router = APIRouter(prefix="/corpora", tags=["corpora"])
 # ── Schémas de requête / réponse ─────────────────────────────────────────────
 
 class CorpusCreate(BaseModel):
-    slug: str
-    title: str
-    profile_id: str
+    slug: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
+    title: str = Field(..., min_length=1, max_length=256)
+    profile_id: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]*$")
 
 
 class CorpusResponse(BaseModel):

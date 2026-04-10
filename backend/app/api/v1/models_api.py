@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 # 2. third-party
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 3. local
@@ -42,9 +42,9 @@ class ProviderInfo(BaseModel):
 
 
 class ModelSelectRequest(BaseModel):
-    model_id: str
-    provider_type: str
-    display_name: str = ""
+    model_id: str = Field(..., min_length=1, max_length=256)
+    provider_type: str = Field(..., min_length=1, max_length=64)
+    display_name: str = Field("", max_length=256)
 
 
 class ModelConfigResponse(BaseModel):

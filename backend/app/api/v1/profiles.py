@@ -10,6 +10,7 @@ Ils sont validés par CorpusProfile avant d'être retournés.
 # 1. stdlib
 import json
 import logging
+import re
 from pathlib import Path
 
 # 2. third-party
@@ -57,9 +58,14 @@ async def list_profiles() -> list[dict]:
     return profiles
 
 
+_SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
 @router.get("/{profile_id}", response_model=dict)
 async def get_profile(profile_id: str) -> dict:
     """Retourne un profil par son id (nom du fichier sans extension)."""
+    if not _SAFE_ID_RE.match(profile_id):
+        raise HTTPException(status_code=400, detail="profile_id invalide")
     path = settings.profiles_dir / f"{profile_id}.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Profil introuvable")
