@@ -457,6 +457,15 @@ async def test_reingest_manifest_skips_existing_pages(async_client, db_session, 
     assert data2["pages_created"] == 0
     assert data2["pages_skipped"] == 2
 
+    # Vérifier que la BDD n'a bien que 2 pages (pas de doublons)
+    from sqlalchemy import select as sa_select
+    from app.models.corpus import PageModel
+    page_result = await db_session.execute(
+        sa_select(PageModel).where(PageModel.manuscript_id == data1["manuscript_id"])
+    )
+    pages_in_db = list(page_result.scalars().all())
+    assert len(pages_in_db) == 2
+
 
 @pytest.mark.asyncio
 async def test_reingest_images_skips_existing_pages(async_client, db_session):

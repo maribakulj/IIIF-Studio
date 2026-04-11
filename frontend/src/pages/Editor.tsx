@@ -119,7 +119,7 @@ export default function Editor({ pageId, onBack }: Props) {
     return <div className="p-8 text-red-600">Erreur : {error}</div>
   }
 
-  const imageUrl = master ? '' : '' // image path not directly stored on PageMaster
+  const imageUrl = master?.image?.derivative_web ?? master?.image?.master ?? ''
   const regions = master?.layout?.regions ?? []
 
   return (

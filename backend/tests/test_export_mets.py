@@ -195,7 +195,9 @@ def test_generate_mets_namespace(beatus_pages, beatus_meta):
 
 def test_generate_mets_objid(beatus_pages, beatus_meta):
     root = _parse(generate_mets(beatus_pages, beatus_meta))
-    assert root.get("OBJID") == "BnF-Latin-8878"
+    objid = root.get("OBJID")
+    assert objid is not None, "OBJID attribute absent du root mets"
+    assert objid == "BnF-Latin-8878"
 
 
 def test_generate_mets_label(beatus_pages, beatus_meta):

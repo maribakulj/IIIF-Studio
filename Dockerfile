@@ -1,6 +1,6 @@
 # Scriptorium AI — image de production (multi-stage)
 # Ce fichier est utilisé par HuggingFace Spaces (SDK docker, détection automatique).
-# Il doit rester synchronisé avec infra/Dockerfile.
+# Source unique — le fichier infra/Dockerfile a été supprimé pour éviter la divergence.
 #
 # Build depuis la racine du dépôt :
 #   docker build -t scriptorium-ai .

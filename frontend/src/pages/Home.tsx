@@ -10,10 +10,11 @@ import {
 
 interface Props {
   onOpenManuscript: (manuscriptId: string, profileId: string) => void
+  onOpenPage?: (pageId: string) => void
   onAdmin: () => void
 }
 
-export default function Home({ onOpenManuscript, onAdmin }: Props) {
+export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
   const [corpora, setCorpora] = useState<Corpus[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +74,7 @@ export default function Home({ onOpenManuscript, onAdmin }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <SearchBar />
+          <SearchBar onSelectResult={onOpenPage ? (r) => onOpenPage(r.page_id) : undefined} />
           <AdminNav onClick={onAdmin} />
         </div>
       </header>

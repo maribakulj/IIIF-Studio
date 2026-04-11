@@ -480,7 +480,10 @@ def test_base_url_trailing_slash_stripped():
     """Un base_url avec slash final ne génère pas de double slash dans les IDs."""
     pages = [_make_page("ms-0001r", "0001r", 1)]
     manifest = generate_manifest(pages, _base_meta(), "https://example.com/")
-    assert "//" not in manifest["id"].replace("://", "X")
+    manifest_id = manifest["id"]
+    # Retirer le protocole puis vérifier qu'il n'y a pas de double slash
+    without_protocol = manifest_id.split("://", 1)[1]
+    assert "//" not in without_protocol
 
 
 # ---------------------------------------------------------------------------
