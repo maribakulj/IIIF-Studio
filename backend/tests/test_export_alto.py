@@ -459,10 +459,10 @@ def test_ocr_processing_absent_without_processing_info():
     assert len(_xpath(root, "//a:OCRProcessing")) == 0
 
 
-def test_software_creator_is_scriptorium_ai(master_text_only):
+def test_software_creator_is_iiif_studio(master_text_only):
     root = _parse(generate_alto(master_text_only))
     creator = _one(root, "//a:processingSoftware/a:softwareCreator")
-    assert creator.text == "Scriptorium AI"
+    assert creator.text == "IIIF Studio"
 
 
 # ---------------------------------------------------------------------------

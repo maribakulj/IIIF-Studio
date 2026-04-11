@@ -2,7 +2,7 @@ const BASE_URL: string = import.meta.env.VITE_API_URL ?? ''
 
 if (!BASE_URL && import.meta.env.PROD) {
   console.warn(
-    '[Scriptorium] VITE_API_URL non défini en production. ' +
+    '[IIIF-Studio] VITE_API_URL non défini en production. ' +
     'Les appels API utiliseront des chemins relatifs, ce qui peut échouer ' +
     'si le frontend n\'est pas servi par le même domaine que le backend.'
   )

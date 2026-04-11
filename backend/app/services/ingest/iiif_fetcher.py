@@ -13,8 +13,8 @@ _DEFAULT_TIMEOUT = 60.0  # secondes — les images IIIF haute résolution peuven
 
 _HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (compatible; ScriptoriumAI/1.0; "
-        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
+        "Mozilla/5.0 (compatible; IIIFStudio/1.0; "
+        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/iiif-studio)"
     ),
     "Accept": "image/jpeg,image/png,image/*,*/*",
 }

@@ -1,9 +1,9 @@
-# Scriptorium AI — image de production (multi-stage)
+# IIIF Studio — image de production (multi-stage)
 # Ce fichier est utilisé par HuggingFace Spaces (SDK docker, détection automatique).
 # Source unique — le fichier infra/Dockerfile a été supprimé pour éviter la divergence.
 #
 # Build depuis la racine du dépôt :
-#   docker build -t scriptorium-ai .
+#   docker build -t iiif-studio .
 
 # ── Stage 1 : build du frontend React ────────────────────────────────────────
 FROM node:20-slim AS frontend-builder

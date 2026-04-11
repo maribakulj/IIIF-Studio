@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     prompts_dir: Path = _REPO_ROOT / "prompts"
 
     # ── Base de données ───────────────────────────────────────────────────────
-    database_url: str = "sqlite+aiosqlite:///./scriptorium.db"
+    database_url: str = "sqlite+aiosqlite:///./iiif_studio.db"
 
     # ── Fournisseurs IA (R06 — clés depuis l'environnement uniquement) ────────
     # Chaque clé est optionnelle. Le backend détecte automatiquement quels

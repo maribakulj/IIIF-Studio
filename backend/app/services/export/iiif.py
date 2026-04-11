@@ -51,7 +51,7 @@ def generate_manifest(
             Optionnelles : language (str), repository (str), shelfmark (str),
                            date_label (str), institution (str)
         base_url: URL de base de la plateforme, sans slash final
-                  (ex. "https://scriptorium-ai.hf.space").
+                  (ex. "https://iiif-studio.hf.space").
 
     Returns:
         dict sérialisable en JSON contenant le Manifest IIIF 3.0.

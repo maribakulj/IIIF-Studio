@@ -1,5 +1,5 @@
 """
-Application FastAPI — point d'entrée de Scriptorium AI.
+Application FastAPI — point d'entrée de IIIF Studio.
 
 Tous les endpoints sont sous /api/v1/ (R10).
 CORS ouvert pour le développement local (origins=["*"]).
@@ -32,7 +32,7 @@ async def lifespan(application: FastAPI):
     # Ces logs apparaissent dans la console HuggingFace et permettent de
     # diagnostiquer instantanément tout problème de chemin en production.
     logger.info(
-        "Démarrage Scriptorium AI — chemins configurés",
+        "Démarrage IIIF Studio — chemins configurés",
         extra={
             "profiles_dir": str(settings.profiles_dir),
             "profiles_dir_ok": settings.profiles_dir.is_dir(),
@@ -59,7 +59,7 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(
-    title="Scriptorium AI",
+    title="IIIF Studio",
     description="Plateforme générique de génération d'éditions savantes augmentées",
     version="0.1.0",
     lifespan=lifespan,

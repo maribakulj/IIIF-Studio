@@ -170,7 +170,7 @@ def generate_alto(master: PageMaster) -> str:
             master.processing.processed_at.isoformat()
         )
         software = etree.SubElement(step, _a("processingSoftware"))
-        etree.SubElement(software, _a("softwareCreator")).text = "Scriptorium AI"
+        etree.SubElement(software, _a("softwareCreator")).text = "IIIF Studio"
         etree.SubElement(software, _a("softwareName")).text = (
             master.processing.model_display_name
         )
