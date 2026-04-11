@@ -3,12 +3,14 @@ import Admin from './pages/Admin.tsx'
 import Editor from './pages/Editor.tsx'
 import Home from './pages/Home.tsx'
 import Reader from './pages/Reader.tsx'
+import RetroDemo from './pages/RetroDemo.tsx'
 
 type View =
   | { name: 'home' }
   | { name: 'reader'; manuscriptId: string; profileId: string }
   | { name: 'admin' }
   | { name: 'editor'; pageId: string }
+  | { name: 'retro-demo' }
 
 export default function App() {
   const [view, setView] = useState<View>({ name: 'home' })
@@ -35,6 +37,10 @@ export default function App() {
         onBack={() => setView({ name: 'home' })}
       />
     )
+  }
+
+  if (view.name === 'retro-demo') {
+    return <RetroDemo onBack={() => setView({ name: 'home' })} />
   }
 
   return (
