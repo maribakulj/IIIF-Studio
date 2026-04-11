@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FC } from 'react'
 import OpenSeadragon from 'openseadragon'
+import { RetroButton } from './retro'
 
 interface Props {
   imageUrl: string
@@ -10,7 +11,6 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null)
 
-  // Initialise OSD une seule fois
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -32,7 +32,6 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
     }
   }, [])
 
-  // Ouvre l'image à chaque changement d'URL
   useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer || !imageUrl) return
@@ -42,40 +41,39 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
       onViewerReady?.(viewer)
     })
   }, [imageUrl]) // eslint-disable-line react-hooks/exhaustive-deps
-  // onViewerReady est intentionnellement exclu : c'est un callback stable
 
   return (
-    <div className="relative w-full h-full bg-stone-800">
+    <div className="relative w-full h-full bg-retro-black">
       <div ref={containerRef} className="w-full h-full" />
-      <div className="absolute bottom-3 right-3 flex gap-1.5">
-        <button
+      <div className="absolute bottom-2 right-2 flex gap-[2px]">
+        <RetroButton
+          size="sm"
           onClick={() => viewerRef.current?.viewport.zoomBy(1.5)}
-          className="w-8 h-8 bg-stone-800/80 text-stone-200 rounded hover:bg-stone-700 text-sm font-bold"
           title="Zoom +"
         >
           +
-        </button>
-        <button
+        </RetroButton>
+        <RetroButton
+          size="sm"
           onClick={() => viewerRef.current?.viewport.zoomBy(0.67)}
-          className="w-8 h-8 bg-stone-800/80 text-stone-200 rounded hover:bg-stone-700 text-sm font-bold"
-          title="Zoom −"
+          title="Zoom -"
         >
-          −
-        </button>
-        <button
+          -
+        </RetroButton>
+        <RetroButton
+          size="sm"
           onClick={() => viewerRef.current?.viewport.goHome()}
-          className="w-8 h-8 bg-stone-800/80 text-stone-200 rounded hover:bg-stone-700 text-xs"
-          title="Réinitialiser"
+          title="Reset"
         >
-          ⊙
-        </button>
-        <button
+          o
+        </RetroButton>
+        <RetroButton
+          size="sm"
           onClick={() => viewerRef.current?.setFullScreen(true)}
-          className="w-8 h-8 bg-stone-800/80 text-stone-200 rounded hover:bg-stone-700 text-xs"
-          title="Plein écran"
+          title="Plein ecran"
         >
-          ⛶
-        </button>
+          []
+        </RetroButton>
       </div>
     </div>
   )

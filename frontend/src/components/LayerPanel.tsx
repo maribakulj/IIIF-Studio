@@ -1,16 +1,17 @@
 import type { FC } from 'react'
+import { RetroCheckbox } from './retro'
 
 const LAYER_LABELS: Record<string, string> = {
   image: 'Image',
-  ocr_diplomatic: 'Transcription diplomatique',
-  ocr_normalized: 'Transcription normalisée',
-  translation_fr: 'Traduction (FR)',
-  translation_en: 'Traduction (EN)',
-  summary: 'Résumé',
-  scholarly_commentary: 'Commentaire savant',
-  public_commentary: 'Commentaire public',
+  ocr_diplomatic: 'Transcription',
+  ocr_normalized: 'Normalise',
+  translation_fr: 'Traduction FR',
+  translation_en: 'Traduction EN',
+  summary: 'Resume',
+  scholarly_commentary: 'Comm. savant',
+  public_commentary: 'Comm. public',
   iconography_detection: 'Iconographie',
-  material_notes: 'Notes matérielles',
+  material_notes: 'Notes mat.',
   uncertainty: 'Incertitudes',
 }
 
@@ -21,24 +22,16 @@ interface Props {
 }
 
 const LayerPanel: FC<Props> = ({ activeLayers, visibleLayers, onToggle }) => (
-  <div className="border-b border-stone-200 bg-stone-50 px-4 py-3 shrink-0">
-    <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">
-      Couches
-    </h3>
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+  <div className="px-2 py-2 shrink-0 border-b border-retro-black bg-retro-gray">
+    <div className="text-retro-xs font-bold mb-1">Couches</div>
+    <div className="flex flex-wrap gap-x-3 gap-y-1">
       {activeLayers.map((layer) => (
-        <label
+        <RetroCheckbox
           key={layer}
-          className="flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer select-none"
-        >
-          <input
-            type="checkbox"
-            checked={visibleLayers.has(layer)}
-            onChange={() => onToggle(layer)}
-            className="rounded border-stone-300 text-stone-700 focus:ring-stone-500"
-          />
-          {LAYER_LABELS[layer] ?? layer}
-        </label>
+          label={LAYER_LABELS[layer] ?? layer}
+          checked={visibleLayers.has(layer)}
+          onChange={() => onToggle(layer)}
+        />
       ))}
     </div>
   </div>

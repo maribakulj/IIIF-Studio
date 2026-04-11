@@ -15,6 +15,7 @@ import LayerPanel from '../components/LayerPanel.tsx'
 import TranscriptionPanel from '../components/TranscriptionPanel.tsx'
 import TranslationPanel from '../components/TranslationPanel.tsx'
 import CommentaryPanel from '../components/CommentaryPanel.tsx'
+import { RetroMenuBar, RetroWindow, RetroButton, RetroBadge } from '../components/retro'
 
 interface Props {
   manuscriptId: string
@@ -34,7 +35,6 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Chargement initial : liste des pages + profil
   useEffect(() => {
     Promise.all([fetchPages(manuscriptId), fetchProfile(profileId)])
       .then(([pgs, prof]) => {
@@ -47,7 +47,6 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
       .finally(() => setLoading(false))
   }, [manuscriptId, profileId])
 
-  // Chargement du master.json à chaque changement de page
   useEffect(() => {
     if (pages.length === 0) return
     setMaster(null)
@@ -68,25 +67,38 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
     })
   }, [])
 
+  // ── Loading ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-stone-500">
-        Chargement…
+      <div className="min-h-screen bg-retro-dither flex items-center justify-center">
+        <RetroWindow title="Chargement" className="w-64">
+          <div className="p-4 text-retro-sm text-center">Chargement...</div>
+        </RetroWindow>
       </div>
     )
   }
 
   if (error) {
-    return <div className="p-8 text-red-600">Erreur : {error}</div>
+    return (
+      <div className="min-h-screen bg-retro-dither flex items-center justify-center">
+        <RetroWindow title="Erreur" className="w-80">
+          <div className="p-4 text-retro-sm">{error}</div>
+        </RetroWindow>
+      </div>
+    )
   }
 
   if (pages.length === 0) {
     return (
-      <div className="p-8 text-stone-500">
-        Aucune page dans ce manuscrit.{' '}
-        <button onClick={onBack} className="underline">
-          Retour
-        </button>
+      <div className="min-h-screen bg-retro-dither flex items-center justify-center">
+        <RetroWindow title="Manuscrit vide" className="w-80">
+          <div className="p-4 text-retro-sm">
+            Aucune page dans ce manuscrit.
+            <div className="mt-2">
+              <RetroButton onClick={onBack}>Retour</RetroButton>
+            </div>
+          </div>
+        </RetroWindow>
       </div>
     )
   }
@@ -96,106 +108,119 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
   const regions: Region[] = master?.layout?.regions ?? []
 
   return (
-    <div className="flex flex-col h-screen bg-stone-100">
-      {/* ── Barre de navigation ─────────────────────────────────────────────── */}
-      <header className="flex items-center gap-3 bg-stone-900 text-stone-100 px-5 py-2.5 shrink-0">
-        <button
-          onClick={onBack}
-          className="text-stone-400 hover:text-stone-100 text-sm transition-colors"
-        >
-          ← Corpus
-        </button>
-        <span className="text-stone-600">|</span>
-        <span className="text-sm font-medium text-stone-200 truncate max-w-xs">
-          {profile?.label ?? profileId}
-        </span>
-
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-stone-400 text-xs">
-            {currentPage.folio_label} — {currentIndex + 1} / {pages.length}
-          </span>
-          {onEdit && (
-            <button
-              onClick={() => onEdit(currentPage.id)}
-              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-sm text-white transition-colors"
+    <div className="flex flex-col h-screen bg-retro-dither">
+      {/* ── Menu bar ───────────────────────────────────────────────── */}
+      <RetroMenuBar
+        items={[
+          { label: 'IIIF Studio', onClick: onBack },
+          { label: profile?.label ?? profileId },
+        ]}
+        right={
+          <div className="flex items-center gap-1">
+            <span className="text-retro-xs px-2">
+              {currentPage.folio_label} — {currentIndex + 1}/{pages.length}
+            </span>
+            <RetroButton
+              size="sm"
+              disabled={currentIndex === 0}
+              onClick={() => setCurrentIndex((i) => i - 1)}
             >
-              Éditer cette page
-            </button>
-          )}
-          <button
-            disabled={currentIndex === 0}
-            onClick={() => setCurrentIndex((i) => i - 1)}
-            className="px-3 py-1 bg-stone-700 hover:bg-stone-600 disabled:opacity-30 rounded text-sm transition-colors"
-          >
-            ←
-          </button>
-          <button
-            disabled={currentIndex === pages.length - 1}
-            onClick={() => setCurrentIndex((i) => i + 1)}
-            className="px-3 py-1 bg-stone-700 hover:bg-stone-600 disabled:opacity-30 rounded text-sm transition-colors"
-          >
-            →
-          </button>
-        </div>
-      </header>
+              Prev
+            </RetroButton>
+            <RetroButton
+              size="sm"
+              disabled={currentIndex === pages.length - 1}
+              onClick={() => setCurrentIndex((i) => i + 1)}
+            >
+              Next
+            </RetroButton>
+            {onEdit && (
+              <RetroButton size="sm" onClick={() => onEdit(currentPage.id)}>
+                Editer
+              </RetroButton>
+            )}
+          </div>
+        }
+      />
 
-      {/* ── Contenu principal ───────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Visionneuse 70% */}
-        <div className="relative flex flex-col" style={{ width: '70%' }}>
-          <Viewer imageUrl={imageUrl} onViewerReady={handleViewerReady} />
-          <RegionOverlay
-            viewer={osdViewer}
-            regions={regions}
-            onRegionClick={setSelectedRegion}
-          />
+      {/* ── Main content ───────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden p-1 gap-1">
 
-          {/* Fiche région (popup) */}
-          {selectedRegion && (
-            <div className="absolute bottom-14 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-stone-200 p-3 max-w-xs text-xs">
-              <div className="flex items-center justify-between gap-4 mb-1.5">
-                <span className="font-semibold text-stone-800 capitalize">
-                  {selectedRegion.type.replace(/_/g, ' ')}
-                </span>
-                <button
-                  onClick={() => setSelectedRegion(null)}
-                  className="text-stone-400 hover:text-stone-700 leading-none"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="space-y-0.5 text-stone-500">
-                <div>id : <span className="font-mono">{selectedRegion.id}</span></div>
-                <div>confiance : {(selectedRegion.confidence * 100).toFixed(0)} %</div>
-                <div>bbox : [{selectedRegion.bbox.join(', ')}]</div>
-              </div>
-            </div>
-          )}
-
-          {/* Indicateur page non analysée */}
-          {!master && !loading && imageUrl && (
-            <div className="absolute top-3 left-3 bg-amber-500/90 text-white text-xs px-3 py-1 rounded-full">
-              Page non analysée
-            </div>
-          )}
-        </div>
-
-        {/* Panneaux droite 30% */}
-        <div
-          className="flex flex-col overflow-hidden border-l border-stone-200 bg-white"
-          style={{ width: '30%' }}
+        {/* ── Viewer window (left, 70%) ──────────────────────────── */}
+        <RetroWindow
+          title={`Folio ${currentPage.folio_label}`}
+          statusBar={
+            master
+              ? `${master.editorial.status} — v${master.editorial.version}`
+              : imageUrl ? 'Page non analysee' : 'Aucune image'
+          }
+          className="flex-[7] min-w-0"
         >
-          {profile && (
-            <LayerPanel
-              activeLayers={profile.active_layers}
-              visibleLayers={visibleLayers}
-              onToggle={toggleLayer}
+          <div className="relative w-full h-full">
+            <Viewer imageUrl={imageUrl} onViewerReady={handleViewerReady} />
+            <RegionOverlay
+              viewer={osdViewer}
+              regions={regions}
+              onRegionClick={setSelectedRegion}
             />
-          )}
 
-          <div className="flex-1 overflow-y-auto divide-y divide-stone-100">
+            {/* Region info popup */}
+            {selectedRegion && (
+              <div
+                className="
+                  absolute bottom-12 left-2
+                  border-retro border-retro-black
+                  bg-retro-white shadow-retro
+                  text-retro-xs p-2 max-w-[220px]
+                "
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="font-bold capitalize">
+                    {selectedRegion.type.replace(/_/g, ' ')}
+                  </span>
+                  <button
+                    onClick={() => setSelectedRegion(null)}
+                    className="text-retro-black font-bold hover:bg-retro-black hover:text-retro-white px-1"
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="space-y-[1px] text-retro-darkgray">
+                  <div>id: {selectedRegion.id}</div>
+                  <div>confiance: {(selectedRegion.confidence * 100).toFixed(0)}%</div>
+                  <div>bbox: [{selectedRegion.bbox.join(', ')}]</div>
+                </div>
+              </div>
+            )}
+
+            {/* Not analyzed badge */}
+            {!master && !loading && imageUrl && (
+              <div className="absolute top-2 left-2">
+                <RetroBadge variant="warning">Non analysee</RetroBadge>
+              </div>
+            )}
+          </div>
+        </RetroWindow>
+
+        {/* ── Right panels (30%) ─────────────────────────────────── */}
+        <RetroWindow
+          title="Analyse"
+          className="flex-[3] min-w-0"
+          scrollable
+        >
+          <div className="flex flex-col">
+            {/* Layer toggles */}
+            {profile && (
+              <LayerPanel
+                activeLayers={profile.active_layers}
+                visibleLayers={visibleLayers}
+                onToggle={toggleLayer}
+              />
+            )}
+
+            {/* Content panels */}
             {master ? (
-              <>
+              <div className="divide-y divide-retro-gray">
                 <TranscriptionPanel
                   ocr={master.ocr}
                   editorial={master.editorial}
@@ -212,18 +237,17 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
                   visiblePublic={visibleLayers.has('public_commentary')}
                   visibleScholarly={visibleLayers.has('scholarly_commentary')}
                 />
-              </>
+              </div>
             ) : (
-              <div className="p-4 text-sm text-stone-400 italic">
-                {imageUrl ? (
-                  <span>Page non encore analysée par l&apos;IA.</span>
-                ) : (
-                  <span>Aucune image associée à cette page.</span>
-                )}
+              <div className="p-3 text-retro-sm text-retro-darkgray">
+                {imageUrl
+                  ? 'Page non encore analysee par l\'IA.'
+                  : 'Aucune image associee a cette page.'
+                }
               </div>
             )}
           </div>
-        </div>
+        </RetroWindow>
       </div>
     </div>
   )
