@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "scriptorium-ai-backend"
+name = "iiif-studio-backend"
 version = "0.2.0"
-description = "Backend Scriptorium AI — plateforme générique d'éditions savantes augmentées"
+description = "Backend IIIF Studio — plateforme générique d'éditions savantes augmentées"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111",

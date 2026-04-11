@@ -68,7 +68,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
     <div className="min-h-screen bg-stone-50">
       <header className="bg-stone-900 text-stone-100 px-8 py-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Scriptorium AI</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">IIIF Studio</h1>
           <p className="text-stone-400 text-sm mt-1">
             Plateforme de génération d'éditions savantes augmentées
           </p>

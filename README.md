@@ -1,5 +1,5 @@
 ---
-title: Scriptorium AI
+title: IIIF Studio
 emoji: 📜
 colorFrom: blue
 colorTo: yellow
@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 ---
 
-# Scriptorium AI
+# IIIF Studio
 
 Plateforme générique de génération d'éditions savantes augmentées pour documents
 patrimoniaux numérisés : manuscrits médiévaux, incunables, cartulaires, archives,
@@ -19,7 +19,7 @@ chartes, papyri — tout type de document, toute époque, toute langue.
 ## Structure du dépôt
 
 ```
-scriptorium-ai/
+iiif-studio/
 ├── backend/            # API FastAPI + pipeline Python
 │   ├── app/
 │   │   ├── api/v1/     # endpoints REST (/api/v1/...)
@@ -41,7 +41,7 @@ scriptorium-ai/
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/<org>/scriptorium-ai && cd scriptorium-ai
+git clone https://github.com/<org>/iiif-studio && cd iiif-studio
 
 # 2. Définir les variables d'environnement
 cp .env.example .env          # puis renseigner les clés dans .env

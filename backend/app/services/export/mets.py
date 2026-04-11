@@ -128,7 +128,7 @@ def generate_mets(
     # ── 1. metsHdr ──────────────────────────────────────────────────────────
     hdr = _el(root, f"{_M}metsHdr", {"CREATEDATE": now_iso})
     agent = _el(hdr, f"{_M}agent", {"ROLE": "CREATOR", "TYPE": "ORGANIZATION"})
-    _el(agent, f"{_M}name", text="Scriptorium AI")
+    _el(agent, f"{_M}name", text="IIIF Studio")
 
     # ── 2. dmdSec — Dublin Core ─────────────────────────────────────────────
     dmd = _el(root, f"{_M}dmdSec", {"ID": "DMD_1"})
@@ -152,15 +152,15 @@ def generate_mets(
     # ── 3. amdSec — techMD global ───────────────────────────────────────────
     amd = _el(root, f"{_M}amdSec")
     tech = _el(amd, f"{_M}techMD", {"ID": "AMD_1"})
-    amd_wrap = _el(tech, f"{_M}mdWrap", {"MDTYPE": "OTHER", "OTHERMDTYPE": "ScriptoriumAI"})
+    amd_wrap = _el(tech, f"{_M}mdWrap", {"MDTYPE": "OTHER", "OTHERMDTYPE": "IIIFStudio"})
     amd_data = _el(amd_wrap, f"{_M}xmlData")
 
     # Premier processing trouvé parmi les pages
     first_processing = next(
         (m.processing for m in pages if m.processing is not None), None
     )
-    amd_root = etree.SubElement(amd_data, "scriptoriumProcessing")
-    _el(amd_root, "generator",   text="Scriptorium AI")
+    amd_root = etree.SubElement(amd_data, "iiifStudioProcessing")
+    _el(amd_root, "generator",   text="IIIF Studio")
     _el(amd_root, "pageCount",   text=str(len(pages)))
     _el(amd_root, "corpusSlug",  text=corpus_slug)
     if first_processing:

@@ -252,7 +252,7 @@ def test_metsHdr_agent_creator(beatus_pages, beatus_meta):
     root = _parse(generate_mets(beatus_pages, beatus_meta))
     agent = _one(root, "m:metsHdr/m:agent[@ROLE='CREATOR']")
     name = _one(agent, "m:name")
-    assert name.text == "Scriptorium AI"
+    assert name.text == "IIIF Studio"
 
 
 def test_metsHdr_has_createdate(beatus_pages, beatus_meta):

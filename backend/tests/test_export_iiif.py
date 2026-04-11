@@ -30,7 +30,7 @@ import pytest
 from app.schemas.page_master import EditorialInfo, EditorialStatus, OCRResult, PageMaster, ProcessingInfo
 from app.services.export.iiif import generate_manifest, write_manifest
 
-_BASE_URL = "https://scriptorium-ai.example.com"
+_BASE_URL = "https://iiif-studio.example.com"
 _IIIF_CONTEXT = "http://iiif.io/api/presentation/3/context.json"
 
 

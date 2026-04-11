@@ -159,8 +159,8 @@ async def _create_page(
 
 _MANIFEST_HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (compatible; ScriptoriumAI/1.0; "
-        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/scriptorium-ai)"
+        "Mozilla/5.0 (compatible; IIIFStudio/1.0; "
+        "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/iiif-studio)"
     ),
     "Accept": "application/ld+json,application/json,*/*",
     "Referer": "https://gallica.bnf.fr/",

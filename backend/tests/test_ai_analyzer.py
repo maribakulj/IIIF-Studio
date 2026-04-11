@@ -127,15 +127,13 @@ def test_prompt_loader_renders_variables(tmp_path):
     assert "{{language_hints}}" not in result
 
 
-def test_prompt_loader_unknown_variable_kept(tmp_path):
-    """Une variable absente du contexte reste telle quelle dans le texte."""
+def test_prompt_loader_unknown_variable_raises(tmp_path):
+    """Une variable absente du contexte lève ValueError (CLAUDE.md §8)."""
     tpl = tmp_path / "prompt.txt"
     tpl.write_text("Hello {{name}} — {{unknown}}")
 
-    result = load_and_render_prompt(tpl, {"name": "World"})
-
-    assert "World" in result
-    assert "{{unknown}}" in result
+    with pytest.raises(ValueError, match="Variables non résolues"):
+        load_and_render_prompt(tpl, {"name": "World"})
 
 
 def test_prompt_loader_empty_context(tmp_path):

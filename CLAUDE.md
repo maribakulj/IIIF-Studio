@@ -1,11 +1,11 @@
-# Scriptorium AI — Instructions permanentes pour Claude Code
+# IIIF Studio — Instructions permanentes pour Claude Code
 ## Version 2.0 — mise à jour Sprint 2
 
 ---
 
 ## 1. Contexte du projet
 
-Scriptorium AI est une **plateforme générique** de génération d'éditions savantes augmentées
+IIIF Studio est une **plateforme générique** de génération d'éditions savantes augmentées
 pour documents patrimoniaux numérisés : manuscrits médiévaux, incunables, cartulaires,
 archives, chartes, papyri — tout type de document, toute époque, toute langue.
 
@@ -38,7 +38,7 @@ latin carolingien, XIe siècle). Le Beatus est un profil parmi d'autres — pas 
 
 ```toml
 [project]
-name = "scriptorium-ai"
+name = "iiif-studio"
 version = "0.1.0"
 requires-python = ">=3.11"
 
@@ -73,7 +73,7 @@ asyncio_mode = "auto"
 ## 3. Arborescence du repo — structure canonique
 
 ```
-scriptorium-ai/
+iiif-studio/
 │
 ├── CLAUDE.md               ← CE FICHIER — ne pas modifier sans instruction
 ├── STATUS.md               ← état courant (mis à jour avant chaque session)

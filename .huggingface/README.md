@@ -1,5 +1,5 @@
 ---
-title: Scriptorium AI
+title: IIIF Studio
 emoji: 📜
 colorFrom: blue
 colorTo: yellow
