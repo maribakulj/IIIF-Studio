@@ -41,7 +41,6 @@ export default function SearchBar({ onSelectResult }: Props) {
     }
   }, [query, runSearch])
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -53,27 +52,45 @@ export default function SearchBar({ onSelectResult }: Props) {
   }, [])
 
   return (
-    <div ref={containerRef} className="relative w-72">
+    <div ref={containerRef} className="relative w-64">
       <div className="relative">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Rechercher dans les manuscrits…"
-          className="w-full bg-stone-800 text-stone-100 placeholder-stone-500 text-sm px-3 py-1.5 pr-8 rounded-md border border-stone-700 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+          placeholder="Rechercher..."
+          className="
+            w-full px-2 py-[2px]
+            text-retro-sm font-retro
+            bg-retro-white text-retro-black
+            border border-retro-black
+            shadow-retro-well
+            placeholder:text-retro-darkgray
+          "
         />
         {loading && (
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs">
-            …
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-retro-darkgray text-retro-xs">
+            ...
           </span>
         )}
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+        <div
+          className="
+            absolute top-full left-0 right-0 mt-[2px]
+            bg-retro-white
+            border-retro border-retro-black
+            shadow-retro-lg
+            z-50 max-h-60
+            overflow-y-auto retro-scroll
+          "
+        >
           {results.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-stone-400 italic">Aucun résultat.</div>
+            <div className="px-2 py-2 text-retro-xs text-retro-darkgray">
+              Aucun resultat.
+            </div>
           ) : (
             <ul>
               {results.map((r) => (
@@ -83,17 +100,20 @@ export default function SearchBar({ onSelectResult }: Props) {
                       setOpen(false)
                       onSelectResult?.(r)
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-amber-50 border-b border-stone-100 last:border-0 transition-colors"
+                    className="
+                      w-full text-left px-2 py-[3px]
+                      text-retro-sm font-retro
+                      hover:bg-retro-select hover:text-retro-select-text
+                      border-b border-retro-gray last:border-0
+                    "
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-stone-800 text-sm">
-                        {r.folio_label}
-                      </span>
-                      <span className="text-xs text-stone-400 shrink-0">
-                        score : {r.score}
+                      <span className="font-bold">{r.folio_label}</span>
+                      <span className="text-retro-xs opacity-60">
+                        {r.score}
                       </span>
                     </div>
-                    <div className="text-xs text-stone-500 mt-0.5 truncate">
+                    <div className="text-retro-xs truncate opacity-70">
                       {r.excerpt}
                     </div>
                   </button>
