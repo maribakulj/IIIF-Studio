@@ -75,7 +75,7 @@ def _make_master(
         "manuscript_id": "ms-test",
         "folio_label": "f001r",
         "sequence": 1,
-        "image": {"original_url": "https://example.com/f.jpg", "width": 1500, "height": 2000},
+        "image": {"master": "https://example.com/f.jpg", "width": 1500, "height": 2000},
         "layout": {"regions": []},
         "ocr": {
             "diplomatic_text": "Incipit liber primus",
@@ -238,13 +238,13 @@ async def test_corrections_archives_old_version(async_client, db_session, monkey
     ms = await _create_manuscript(db_session, corpus.id)
     page = await _create_page(db_session, ms.id)
 
-    written_paths: list[str] = []
+    written_data: dict[str, str] = {}
 
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(Path, "read_text", lambda self, **kw: _make_master(page.id, version=1))
 
     def _capture_write(self: Path, content: str, **kw: object) -> None:
-        written_paths.append(str(self))
+        written_data[str(self)] = content
 
     monkeypatch.setattr(Path, "write_text", _capture_write)
 
@@ -254,9 +254,16 @@ async def test_corrections_archives_old_version(async_client, db_session, monkey
     )
 
     # Deux écritures attendues : master_v1.json (archive) + master.json (nouveau)
+    written_paths = list(written_data.keys())
     assert len(written_paths) >= 2
     assert any("master_v1.json" in p for p in written_paths)
     assert any("master.json" in p and "master_v" not in p for p in written_paths)
+
+    # Vérifier que l'archive contient bien la version originale (v1)
+    import json as _json
+    archive_path = next(p for p in written_paths if "master_v1.json" in p)
+    archive_data = _json.loads(written_data[archive_path])
+    assert archive_data["editorial"]["version"] == 1
 
 
 @pytest.mark.asyncio

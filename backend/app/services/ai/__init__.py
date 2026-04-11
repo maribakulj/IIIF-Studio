@@ -1,19 +1,31 @@
 """
 Services AI — providers Google AI, registre de modèles, et analyse IA.
+
+Les imports de providers sont différés (lazy) pour éviter de charger les SDK
+tiers (google-genai, mistralai) au démarrage. Cela permet à l'application
+de fonctionner même si un SDK n'est pas installé.
 """
-from app.services.ai.analyzer import run_primary_analysis
-from app.services.ai.client_factory import build_client
-from app.services.ai.model_registry import build_model_config, list_all_models
-from app.services.ai.prompt_loader import load_and_render_prompt
-from app.services.ai.provider_google_ai import GoogleAIProvider
-from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
-from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
-from app.services.ai.response_parser import ParseError, parse_ai_response
+
+
+def __getattr__(name: str):
+    """Import paresseux — les symboles sont résolus au premier accès."""
+    _lazy_map = {
+        "run_primary_analysis": "app.services.ai.analyzer",
+        "build_client": "app.services.ai.client_factory",
+        "build_model_config": "app.services.ai.model_registry",
+        "list_all_models": "app.services.ai.model_registry",
+        "load_and_render_prompt": "app.services.ai.prompt_loader",
+        "parse_ai_response": "app.services.ai.response_parser",
+        "ParseError": "app.services.ai.response_parser",
+    }
+    if name in _lazy_map:
+        import importlib
+        module = importlib.import_module(_lazy_map[name])
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
-    "GoogleAIProvider",
-    "VertexAPIKeyProvider",
-    "VertexServiceAccountProvider",
     "list_all_models",
     "build_model_config",
     "build_client",

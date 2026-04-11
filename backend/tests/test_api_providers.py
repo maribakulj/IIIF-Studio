@@ -90,7 +90,7 @@ _MOCK_MISTRAL_MODELS = [
 
 @pytest.mark.asyncio
 async def test_list_providers_returns_list(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     resp = await async_client.get("/api/v1/providers")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
@@ -98,14 +98,14 @@ async def test_list_providers_returns_list(async_client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_providers_count(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     data = (await async_client.get("/api/v1/providers")).json()
     assert len(data) == 4  # 4 providers connus
 
 
 @pytest.mark.asyncio
 async def test_list_providers_fields(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     data = (await async_client.get("/api/v1/providers")).json()
     p = data[0]
     assert "provider_type" in p
@@ -116,7 +116,7 @@ async def test_list_providers_fields(async_client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_providers_all_unavailable(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     data = (await async_client.get("/api/v1/providers")).json()
     assert all(not p["available"] for p in data)
     assert all(p["model_count"] == 0 for p in data)
@@ -124,7 +124,7 @@ async def test_list_providers_all_unavailable(async_client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_providers_google_available(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_GOOGLE_ONLY)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_GOOGLE_ONLY)
     data = (await async_client.get("/api/v1/providers")).json()
     google = next(p for p in data if p["provider_type"] == "google_ai_studio")
     assert google["available"] is True
@@ -133,7 +133,7 @@ async def test_list_providers_google_available(async_client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_providers_mistral_available(async_client, monkeypatch):
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_GOOGLE_AND_MISTRAL)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_GOOGLE_AND_MISTRAL)
     data = (await async_client.get("/api/v1/providers")).json()
     mistral = next(p for p in data if p["provider_type"] == "mistral")
     assert mistral["available"] is True
@@ -143,7 +143,7 @@ async def test_list_providers_mistral_available(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_list_providers_includes_mistral_type(async_client, monkeypatch):
     """Mistral est toujours dans la liste même si indisponible."""
-    monkeypatch.setattr(models_api_module, "get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
+    monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     data = (await async_client.get("/api/v1/providers")).json()
     types_ = [p["provider_type"] for p in data]
     assert "mistral" in types_
@@ -156,7 +156,7 @@ async def test_list_providers_includes_mistral_type(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_provider_models_google(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_models_for_provider", lambda ptype: _MOCK_GOOGLE_MODELS
+        "app.services.ai.model_registry.list_models_for_provider", lambda ptype: _MOCK_GOOGLE_MODELS
     )
     resp = await async_client.get("/api/v1/providers/google_ai_studio/models")
     assert resp.status_code == 200
@@ -166,7 +166,7 @@ async def test_get_provider_models_google(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_provider_models_mistral(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_models_for_provider", lambda ptype: _MOCK_MISTRAL_MODELS
+        "app.services.ai.model_registry.list_models_for_provider", lambda ptype: _MOCK_MISTRAL_MODELS
     )
     resp = await async_client.get("/api/v1/providers/mistral/models")
     assert resp.status_code == 200
@@ -189,7 +189,7 @@ async def test_get_provider_models_not_configured(async_client, monkeypatch):
     def _raise(ptype):
         raise RuntimeError("Variable d'environnement manquante : MISTRAL_API_KEY")
 
-    monkeypatch.setattr(models_api_module, "list_models_for_provider", _raise)
+    monkeypatch.setattr("app.services.ai.model_registry.list_models_for_provider", _raise)
     resp = await async_client.get("/api/v1/providers/mistral/models")
     assert resp.status_code == 503
 
@@ -197,7 +197,7 @@ async def test_get_provider_models_not_configured(async_client, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_provider_models_fields(async_client, monkeypatch):
     monkeypatch.setattr(
-        models_api_module, "list_models_for_provider", lambda ptype: _MOCK_MISTRAL_MODELS
+        "app.services.ai.model_registry.list_models_for_provider", lambda ptype: _MOCK_MISTRAL_MODELS
     )
     data = (await async_client.get("/api/v1/providers/mistral/models")).json()
     m = data[0]

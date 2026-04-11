@@ -53,7 +53,7 @@ def _make_page(
         folio_label=folio_label,
         sequence=sequence,
         image={
-            "original_url": original_url or f"https://example.com/{folio_label}.jpg",
+            "master": original_url or f"https://example.com/{folio_label}.jpg",
             "derivative_web": f"/data/deriv/{folio_label}.jpg",
             "thumbnail": f"/data/thumb/{folio_label}.jpg",
             "width": width,
@@ -193,11 +193,11 @@ def test_manifest_label_uses_language_key(simple_manifest):
 
 
 def test_manifest_label_without_language_uses_none():
-    """Sans champ language, la clé de label est 'none'."""
+    """Sans champ language, la clé de label est 'en' (défaut IIIF-compliant)."""
     pages = [_make_page("ms-0001r", "0001r", 1)]
-    meta = _base_meta()  # pas de language
+    meta = _base_meta()  # pas de language → défaut "en"
     manifest = generate_manifest(pages, meta, _BASE_URL)
-    assert "none" in manifest["label"]
+    assert "en" in manifest["label"]
 
 
 def test_manifest_label_fr(chroniques_pages, chroniques_meta):
@@ -272,7 +272,7 @@ def test_canvas_order_respects_sequence():
         _make_page("ms-f002r", "f002r", 2),
     ]
     manifest = generate_manifest(pages, _base_meta(), _BASE_URL)
-    labels = [c["label"]["none"][0] for c in manifest["items"]]
+    labels = [c["label"]["en"][0] for c in manifest["items"]]
     assert labels == ["Folio f001r", "Folio f002r", "Folio f003r"]
 
 
@@ -283,7 +283,7 @@ def test_canvas_order_large_sequence():
     random.shuffle(pages)
     manifest = generate_manifest(pages, _base_meta(), _BASE_URL)
     sequences_in_label = [
-        int(c["label"]["none"][0].replace("Folio f", "").replace("r", ""))
+        int(c["label"]["en"][0].replace("Folio f", "").replace("r", ""))
         for c in manifest["items"]
     ]
     assert sequences_in_label == list(range(1, 11))
@@ -344,7 +344,7 @@ def test_canvas_width_matches_image(beatus_pages, beatus_meta):
         # Trouve la page correspondante
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
-        assert canvas["width"] == page.image["width"]
+        assert canvas["width"] == page.image.width
 
 
 def test_canvas_height_matches_image(beatus_pages, beatus_meta):
@@ -352,7 +352,7 @@ def test_canvas_height_matches_image(beatus_pages, beatus_meta):
     for canvas in manifest["items"]:
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
-        assert canvas["height"] == page.image["height"]
+        assert canvas["height"] == page.image.height
 
 
 def test_canvas_dimensions_beatus_hr():
@@ -447,7 +447,7 @@ def test_annotation_body_id_is_original_url(beatus_pages, beatus_meta):
         page_id = canvas["id"].split("/canvas/")[-1]
         page = next(p for p in beatus_pages if p.page_id == page_id)
         body = canvas["items"][0]["items"][0]["body"]
-        assert body["id"] == page.image["original_url"]
+        assert body["id"] == page.image.master
 
 
 def test_annotation_body_contains_gallica_url(beatus_pages, beatus_meta):
@@ -480,7 +480,10 @@ def test_base_url_trailing_slash_stripped():
     """Un base_url avec slash final ne génère pas de double slash dans les IDs."""
     pages = [_make_page("ms-0001r", "0001r", 1)]
     manifest = generate_manifest(pages, _base_meta(), "https://example.com/")
-    assert "//" not in manifest["id"].replace("://", "X")
+    manifest_id = manifest["id"]
+    # Retirer le protocole puis vérifier qu'il n'y a pas de double slash
+    without_protocol = manifest_id.split("://", 1)[1]
+    assert "//" not in without_protocol
 
 
 # ---------------------------------------------------------------------------

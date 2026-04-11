@@ -66,10 +66,11 @@ def _make_page(
     processing = None
     if with_processing:
         processing = ProcessingInfo(
+            provider="google_ai_studio",
             model_id="gemini-2.0-flash",
             model_display_name="Gemini 2.0 Flash",
             prompt_version="prompts/medieval-illuminated/primary_v1.txt",
-            raw_response_path=f"/data/corpora/test/pages/{folio_label}/gemini_raw.json",
+            raw_response_path=f"/data/corpora/test/pages/{folio_label}/ai_raw.json",
             processed_at=datetime(2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
         )
     ocr = OCRResult(diplomatic_text=ocr_text, language="la", confidence=0.90) if ocr_text else None
@@ -80,7 +81,7 @@ def _make_page(
         folio_label=folio_label,
         sequence=sequence,
         image={
-            "original_url": original_url or f"https://example.com/{folio_label}.jpg",
+            "master": original_url or f"https://example.com/{folio_label}.jpg",
             "derivative_web": derivative_web or f"/data/deriv/{folio_label}.jpg",
             "thumbnail": f"/data/thumb/{folio_label}.jpg",
             "width": 1500,
@@ -194,7 +195,9 @@ def test_generate_mets_namespace(beatus_pages, beatus_meta):
 
 def test_generate_mets_objid(beatus_pages, beatus_meta):
     root = _parse(generate_mets(beatus_pages, beatus_meta))
-    assert root.get("OBJID") == "BnF-Latin-8878"
+    objid = root.get("OBJID")
+    assert objid is not None, "OBJID attribute absent du root mets"
+    assert objid == "BnF-Latin-8878"
 
 
 def test_generate_mets_label(beatus_pages, beatus_meta):

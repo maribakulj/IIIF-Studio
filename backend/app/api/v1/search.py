@@ -7,6 +7,7 @@ Implémentation MVP : scan des fichiers master.json (pas d'index externe).
 Insensible à la casse et aux accents (unicodedata NFD + ASCII).
 """
 # 1. stdlib
+import asyncio
 import json
 import logging
 import unicodedata
@@ -95,7 +96,8 @@ def _score_master(data: dict, query_normalized: str) -> tuple[int, str]:
 
 @router.get("/search", response_model=list[SearchResult])
 async def search_pages(
-    q: str = Query(..., min_length=2, description="Requête de recherche (min. 2 caractères)"),
+    q: str = Query(..., min_length=2, max_length=500, description="Requête de recherche (2–500 caractères)"),
+    limit: int = Query(200, ge=1, le=2000, description="Nombre maximum de résultats"),
 ) -> list[SearchResult]:
     """Recherche plein texte dans les master.json de tous les corpus.
 
@@ -106,29 +108,32 @@ async def search_pages(
     query_normalized = _normalize(q.strip())
     data_dir = _config_module.settings.data_dir
 
-    results: list[SearchResult] = []
+    def _scan() -> list[SearchResult]:
+        """Scan bloquant exécuté dans un thread dédié."""
+        hits: list[SearchResult] = []
+        for master_path in data_dir.glob("corpora/*/pages/*/master.json"):
+            try:
+                raw: dict = json.loads(master_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
 
-    for master_path in data_dir.glob("corpora/*/pages/*/master.json"):
-        try:
-            raw: dict = json.loads(master_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
+            score, excerpt = _score_master(raw, query_normalized)
+            if score == 0:
+                continue
 
-        score, excerpt = _score_master(raw, query_normalized)
-        if score == 0:
-            continue
-
-        results.append(
-            SearchResult(
-                page_id=raw.get("page_id", ""),
-                folio_label=raw.get("folio_label", ""),
-                manuscript_id=raw.get("manuscript_id", ""),
-                excerpt=excerpt,
-                score=score,
-                corpus_profile=raw.get("corpus_profile", ""),
+            hits.append(
+                SearchResult(
+                    page_id=raw.get("page_id", ""),
+                    folio_label=raw.get("folio_label", ""),
+                    manuscript_id=raw.get("manuscript_id", ""),
+                    excerpt=excerpt,
+                    score=score,
+                    corpus_profile=raw.get("corpus_profile", ""),
+                )
             )
-        )
+        hits.sort(key=lambda r: r.score, reverse=True)
+        return hits
 
-    results.sort(key=lambda r: r.score, reverse=True)
+    results = await asyncio.to_thread(_scan)
     logger.info("Recherche exécutée", extra={"q": q, "results": len(results)})
-    return results
+    return results[:limit]

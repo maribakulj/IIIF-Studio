@@ -14,8 +14,8 @@ import uuid
 from datetime import datetime, timezone
 
 # 2. third-party
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,9 +29,9 @@ router = APIRouter(prefix="/corpora", tags=["corpora"])
 # ── Schémas de requête / réponse ─────────────────────────────────────────────
 
 class CorpusCreate(BaseModel):
-    slug: str
-    title: str
-    profile_id: str
+    slug: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
+    title: str = Field(..., min_length=1, max_length=256)
+    profile_id: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]*$")
 
 
 class CorpusResponse(BaseModel):
@@ -59,9 +59,13 @@ class ManuscriptResponse(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=list[CorpusResponse])
-async def list_corpora(db: AsyncSession = Depends(get_db)) -> list[CorpusModel]:
-    """Retourne tous les corpus enregistrés."""
-    result = await db.execute(select(CorpusModel))
+async def list_corpora(
+    db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Nombre d'éléments à sauter"),
+    limit: int = Query(100, ge=1, le=1000, description="Nombre maximum d'éléments"),
+) -> list[CorpusModel]:
+    """Retourne les corpus enregistrés (paginé)."""
+    result = await db.execute(select(CorpusModel).offset(skip).limit(limit))
     return list(result.scalars().all())
 
 

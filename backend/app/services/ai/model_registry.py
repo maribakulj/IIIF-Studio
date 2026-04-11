@@ -1,5 +1,8 @@
 """
 Registre agrégé des modèles disponibles tous providers confondus.
+
+Les imports de providers sont différés dans _build_providers() pour éviter
+de charger les SDK tiers (google-genai, mistralai) au niveau module.
 """
 # 1. stdlib
 import logging
@@ -8,10 +11,6 @@ from datetime import datetime, timezone
 # 2. local
 from app.schemas.model_config import ModelConfig, ModelInfo, ProviderType
 from app.services.ai.base import AIProvider
-from app.services.ai.provider_google_ai import GoogleAIProvider
-from app.services.ai.provider_mistral import MistralProvider
-from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
-from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +23,27 @@ _PROVIDER_DISPLAY_NAMES: dict[ProviderType, str] = {
 }
 
 
+_cached_providers: list[AIProvider] | None = None
+
+
 def _build_providers() -> list[AIProvider]:
-    return [
+    """Construit la liste des providers — imports différés, résultat mis en cache."""
+    global _cached_providers
+    if _cached_providers is not None:
+        return _cached_providers
+
+    from app.services.ai.provider_google_ai import GoogleAIProvider
+    from app.services.ai.provider_mistral import MistralProvider
+    from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
+    from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
+
+    _cached_providers = [
         GoogleAIProvider(),
         VertexAPIKeyProvider(),
         VertexServiceAccountProvider(),
         MistralProvider(),
     ]
+    return _cached_providers
 
 
 def get_available_providers() -> list[dict]:

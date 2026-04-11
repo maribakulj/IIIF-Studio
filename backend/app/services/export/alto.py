@@ -1,7 +1,7 @@
 """
 Générateur ALTO v4 depuis un PageMaster validé (R02).
 
-Source canonique : PageMaster uniquement — jamais la réponse brute gemini_raw.json.
+Source canonique : PageMaster uniquement — jamais la réponse brute ai_raw.json.
 bbox [x, y, width, height] → HPOS / VPOS / WIDTH / HEIGHT (correspondance directe).
 
 Mapping RegionType → élément ALTO :
@@ -82,7 +82,7 @@ def _build_text_block(
         text = fallback_text
 
     if not text:
-        return  # TextBlock vide — valide ALTO
+        return  # TextBlock sans TextLine — valide ALTO, région visible dans le layout
 
     x, y, w, h = region.bbox
     line_el = etree.SubElement(
@@ -160,11 +160,7 @@ def generate_alto(master: PageMaster) -> str:
     etree.SubElement(desc, _a("MeasurementUnit")).text = "pixel"
 
     src_info = etree.SubElement(desc, _a("sourceImageInformation"))
-    file_name = (
-        master.image.get("original_url")
-        or master.image.get("derivative_web")
-        or master.page_id
-    )
+    file_name = master.image.master or master.image.derivative_web or master.page_id
     etree.SubElement(src_info, _a("fileName")).text = str(file_name)
 
     if master.processing:
@@ -185,8 +181,8 @@ def generate_alto(master: PageMaster) -> str:
     # ── Layout ─────────────────────────────────────────────────────────────
     layout_el = etree.SubElement(root, _a("Layout"))
 
-    width = int(master.image.get("width", 0))
-    height = int(master.image.get("height", 0))
+    width = master.image.width
+    height = master.image.height
 
     page_id_safe = master.page_id.replace(" ", "_")
     page_el = etree.SubElement(

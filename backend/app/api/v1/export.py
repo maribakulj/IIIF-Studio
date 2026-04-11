@@ -10,6 +10,7 @@ Règle (R02) : toutes les sorties sont générées depuis les PageMasters
 (master.json), jamais depuis les réponses brutes de l'IA.
 """
 # 1. stdlib
+import asyncio
 import io
 import json
 import logging
@@ -66,7 +67,7 @@ async def _load_manuscript_with_masters(
 
     masters: list[PageMaster] = []
     for page in pages:
-        master = _read_master_json(corpus.slug, page.id)
+        master = await _read_master_json(corpus.slug, page.id)
         if master is not None:
             masters.append(master)
 
@@ -79,8 +80,8 @@ async def _load_manuscript_with_masters(
     return manuscript, corpus, masters
 
 
-def _read_master_json(corpus_slug: str, page_id: str) -> PageMaster | None:
-    """Lit le master.json d'une page depuis data/. Retourne None si absent."""
+def _read_master_json_sync(corpus_slug: str, page_id: str) -> PageMaster | None:
+    """Lit le master.json d'une page depuis data/. Retourne None si absent (bloquant)."""
     path = (
         _config_module.settings.data_dir
         / "corpora"
@@ -93,6 +94,11 @@ def _read_master_json(corpus_slug: str, page_id: str) -> PageMaster | None:
         return None
     raw = json.loads(path.read_text(encoding="utf-8"))
     return PageMaster.model_validate(raw)
+
+
+async def _read_master_json(corpus_slug: str, page_id: str) -> PageMaster | None:
+    """Version async — délègue la lecture au threadpool."""
+    return await asyncio.to_thread(_read_master_json_sync, corpus_slug, page_id)
 
 
 def _build_manuscript_meta(
@@ -154,7 +160,7 @@ async def get_alto(page_id: str, db: AsyncSession = Depends(get_db)) -> Response
     manuscript = await db.get(ManuscriptModel, page.manuscript_id)
     corpus = await db.get(CorpusModel, manuscript.corpus_id)
 
-    master = _read_master_json(corpus.slug, page_id)
+    master = await _read_master_json(corpus.slug, page_id)
     if master is None:
         raise HTTPException(
             status_code=404,

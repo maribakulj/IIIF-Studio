@@ -83,7 +83,7 @@ def _make_master_json(page_id: str, folio_label: str, sequence: int) -> str:
         "folio_label": folio_label,
         "sequence": sequence,
         "image": {
-            "original_url": f"https://example.com/{page_id}.jpg",
+            "master": f"https://example.com/{page_id}.jpg",
             "derivative_web": f"/data/deriv/{page_id}.jpg",
             "thumbnail": f"/data/thumb/{page_id}.jpg",
             "width": 1500,

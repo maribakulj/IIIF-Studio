@@ -22,9 +22,6 @@ retourne toujours False afin d'éviter des appels réseau voués à l'échec.
 import logging
 import os
 
-# 2. third-party
-from google.genai import types  # noqa: F401  (conservé pour import cohérence)
-
 # 3. local
 from app.schemas.model_config import ModelInfo, ProviderType
 from app.services.ai.base import AIProvider

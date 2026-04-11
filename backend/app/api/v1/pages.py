@@ -18,7 +18,7 @@ from typing import Any
 
 # 2. third-party
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 3. local
@@ -42,12 +42,12 @@ class CorrectionsRequest(BaseModel):
     indiquée est restaurée (avec incrémentation de editorial.version).
     """
 
-    ocr_diplomatic_text: str | None = None
-    editorial_status: str | None = None
-    commentary_public: str | None = None
-    commentary_scholarly: str | None = None
+    ocr_diplomatic_text: str | None = Field(None, max_length=500_000)
+    editorial_status: str | None = Field(None, max_length=50)
+    commentary_public: str | None = Field(None, max_length=100_000)
+    commentary_scholarly: str | None = Field(None, max_length=100_000)
     region_validations: dict[str, str] | None = None
-    restore_to_version: int | None = None
+    restore_to_version: int | None = Field(None, ge=1)
 
 
 class VersionInfo(BaseModel):

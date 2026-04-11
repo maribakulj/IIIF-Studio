@@ -42,6 +42,7 @@ export default function App() {
       onOpenManuscript={(manuscriptId, profileId) =>
         setView({ name: 'reader', manuscriptId, profileId })
       }
+      onOpenPage={(pageId) => setView({ name: 'editor', pageId })}
       onAdmin={() => setView({ name: 'admin' })}
     />
   )

@@ -6,6 +6,7 @@ Le code charge le fichier, substitue les variables {{nom}}, envoie à l'API.
 """
 # 1. stdlib
 import logging
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,11 @@ def load_and_render_prompt(template_path: str | Path, context: dict[str, str]) -
     rendered = template
     for key, value in context.items():
         rendered = rendered.replace("{{" + key + "}}", value)
+
+    # Vérifier qu'il ne reste pas de variables non résolues (CLAUDE.md §8)
+    unresolved = re.findall(r"\{\{\w+\}\}", rendered)
+    if unresolved:
+        raise ValueError(f"Variables non résolues dans le prompt : {unresolved}")
 
     logger.debug(
         "Prompt chargé et rendu",

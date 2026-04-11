@@ -60,8 +60,15 @@ class GoogleAIProvider(AIProvider):
             raise RuntimeError(f"Variable d'environnement manquante : {_ENV_KEY}")
         client = genai.Client(api_key=os.environ[_ENV_KEY])
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-        response = client.models.generate_content(
-            model=model_id,
-            contents=[image_part, prompt],
-        )
+        try:
+            response = client.models.generate_content(
+                model=model_id,
+                contents=[image_part, prompt],
+            )
+        except Exception as exc:
+            logger.error(
+                "Appel API Google AI Studio échoué",
+                extra={"model": model_id, "error": str(exc)},
+            )
+            raise RuntimeError(f"Erreur API Google AI Studio ({model_id}) : {exc}") from exc
         return response.text or ""

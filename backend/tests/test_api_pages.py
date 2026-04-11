@@ -87,7 +87,7 @@ def _make_master_json(page_id: str, corpus_profile: str = "medieval-illuminated"
         "folio_label": "f001r",
         "sequence": 1,
         "image": {
-            "original_url": "https://example.com/f001r.jpg",
+            "master": "https://example.com/f001r.jpg",
             "derivative_web": "/data/deriv/f001r.jpg",
             "thumbnail": "/data/thumb/f001r.jpg",
             "width": 1500,

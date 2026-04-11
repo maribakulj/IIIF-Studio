@@ -65,11 +65,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS (dev : tous les origines autorisés) ──────────────────────────────────
+# ── CORS (dev : toutes les origines autorisées, sans credentials) ──────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -97,8 +97,9 @@ async def serve_frontend(full_path: str) -> FileResponse | RedirectResponse:
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail=f"Endpoint not found: /{full_path}")
     if _STATIC_DIR.is_dir():
-        candidate = _STATIC_DIR / full_path
-        if candidate.is_file():
+        candidate = (_STATIC_DIR / full_path).resolve()
+        # Empêcher le path traversal : le fichier résolu doit être sous _STATIC_DIR
+        if candidate.is_file() and str(candidate).startswith(str(_STATIC_DIR.resolve())):
             return FileResponse(candidate)
         index = _STATIC_DIR / "index.html"
         if index.exists():

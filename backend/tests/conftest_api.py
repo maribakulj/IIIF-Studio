@@ -51,10 +51,11 @@ async def async_client(db_session: AsyncSession):
 
     app.dependency_overrides[get_db] = _override_get_db
     # Les background tasks (execute_corpus_job, execute_page_job) créent leur
-    # propre session via async_session_factory. On les neutralise pour éviter
-    # qu'elles tentent de se connecter à la BDD réelle pendant les tests d'API.
-    with patch("app.api.v1.jobs.execute_corpus_job", AsyncMock(return_value=None)), \
-         patch("app.api.v1.jobs.execute_page_job", AsyncMock(return_value=None)):
+    # propre session via async_session_factory. On les neutralise en mockant
+    # les modules sources pour éviter qu'elles tentent de se connecter à la
+    # BDD réelle pendant les tests d'API.
+    with patch("app.services.corpus_runner.execute_corpus_job", AsyncMock(return_value={"total": 0, "done": 0, "failed": 0})), \
+         patch("app.services.job_runner.execute_page_job", AsyncMock(return_value=None)):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:

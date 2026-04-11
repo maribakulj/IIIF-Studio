@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 # 2. third-party
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 3. local
@@ -25,11 +25,6 @@ from app.models.corpus import CorpusModel
 from app.models.database import get_db
 from app.models.model_config_db import ModelConfigDB
 from app.schemas.model_config import ProviderType
-from app.services.ai.model_registry import (
-    get_available_providers,
-    list_all_models,
-    list_models_for_provider,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +42,9 @@ class ProviderInfo(BaseModel):
 
 
 class ModelSelectRequest(BaseModel):
-    model_id: str
-    provider_type: str
-    display_name: str = ""
+    model_id: str = Field(..., min_length=1, max_length=256)
+    provider_type: str = Field(..., min_length=1, max_length=64)
+    display_name: str = Field("", max_length=256)
 
 
 class ModelConfigResponse(BaseModel):
@@ -77,6 +72,8 @@ async def list_providers() -> list[dict]:
     Un provider est disponible si la variable d'environnement correspondante
     est présente dans les secrets HuggingFace. Aucune clé n'est exposée.
     """
+    from app.services.ai.model_registry import get_available_providers
+
     return get_available_providers()
 
 
@@ -91,6 +88,8 @@ async def get_provider_models(provider_type: str) -> list[dict]:
             detail=f"Provider inconnu : {provider_type}. "
                    f"Valeurs acceptées : {[p.value for p in ProviderType]}",
         )
+    from app.services.ai.model_registry import list_models_for_provider
+
     try:
         models = list_models_for_provider(ptype)
     except RuntimeError as exc:
@@ -104,6 +103,8 @@ async def get_provider_models(provider_type: str) -> list[dict]:
 @router.post("/models/refresh", response_model=ModelsRefreshResponse)
 async def refresh_models() -> ModelsRefreshResponse:
     """Force la mise à jour de la liste agrégée de tous les modèles disponibles."""
+    from app.services.ai.model_registry import list_all_models
+
     models = list_all_models()
     return ModelsRefreshResponse(
         models=[m.model_dump() for m in models],

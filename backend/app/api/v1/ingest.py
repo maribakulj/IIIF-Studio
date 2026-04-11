@@ -11,13 +11,14 @@ Règle : ingestion = création des PageModel en BDD uniquement.
 """
 # 1. stdlib
 import logging
+import re
 import uuid
 from pathlib import Path
 
 # 2. third-party
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,28 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["ingestion"])
 
+# ── Constantes de sécurité ────────────────────────────────────────────────────
+
+_SAFE_LABEL_RE = re.compile(r"^[\w\-\.]+$")
+_MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 Mo par fichier
+_ALLOWED_MIME_PREFIXES = ("image/",)
+
+
+def _sanitize_label(label: str) -> str:
+    """Nettoie un folio_label : garde uniquement alphanum, -, _, ."""
+    clean = Path(label).name  # retire tout chemin
+    if not _SAFE_LABEL_RE.match(clean) or not clean:
+        clean = re.sub(r"[^\w\-\.]", "_", clean) or "page"
+    return clean
+
+
+def _sanitize_filename(name: str) -> str:
+    """Nettoie un nom de fichier uploadé : garde uniquement le basename sûr."""
+    clean = Path(name).name
+    if not _SAFE_LABEL_RE.match(clean) or not clean:
+        clean = f"{uuid.uuid4().hex[:12]}.bin"
+    return clean
+
 
 # ── Schémas ───────────────────────────────────────────────────────────────────
 
@@ -38,8 +61,8 @@ class IIIFManifestRequest(BaseModel):
 
 
 class IIIFImagesRequest(BaseModel):
-    urls: list[str]
-    folio_labels: list[str]
+    urls: list[str] = Field(..., max_length=5000)
+    folio_labels: list[str] = Field(..., max_length=5000)
 
 
 class IngestResponse(BaseModel):
@@ -144,11 +167,31 @@ _MANIFEST_HEADERS = {
 }
 
 
+_MAX_MANIFEST_BYTES = 10 * 1024 * 1024  # 10 Mo max pour un manifest JSON
+
+
+def _validate_url(url: str) -> None:
+    """Rejette les URLs non-HTTP et les cibles réseau privé (SSRF)."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Schéma non autorisé : {parsed.scheme!r}")
+    host = (parsed.hostname or "").lower()
+    # Bloquer les adresses privées / locales
+    blocked = ("localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal")
+    if host in blocked or host.startswith("169.254.") or host.startswith("10.") or host.startswith("192.168."):
+        raise ValueError(f"Hôte interdit : {host}")
+
+
 async def _fetch_json_manifest(url: str) -> dict:
-    """Télécharge un manifest IIIF. Fonction isolée pour faciliter les tests."""
+    """Télécharge un manifest IIIF avec protections SSRF + taille max."""
+    _validate_url(url)
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, headers=_MANIFEST_HEADERS, follow_redirects=True, timeout=30.0)
         resp.raise_for_status()
+        if len(resp.content) > _MAX_MANIFEST_BYTES:
+            raise ValueError(f"Manifest trop volumineux ({len(resp.content)} octets)")
         return resp.json()
 
 
@@ -202,15 +245,32 @@ async def ingest_files(
     seq = await _next_sequence(db, ms.id)
 
     # Collect labels and detect duplicates
-    labels = [Path(f.filename or f"file_{i}").stem for i, f in enumerate(files)]
+    labels = [_sanitize_label(Path(f.filename or f"file_{i}").stem) for i, f in enumerate(files)]
     dupes = _find_duplicate_labels(labels)
 
     created: list[PageModel] = []
+    written_files: list[Path] = []
     skipped = 0
     for i, upload in enumerate(files):
-        filename = Path(upload.filename or f"file_{i}").name
+        # Validation MIME type
+        ctype = upload.content_type or ""
+        if not any(ctype.startswith(p) for p in _ALLOWED_MIME_PREFIXES):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Type MIME non autorisé : {ctype!r}. Seules les images sont acceptées.",
+            )
+
+        filename = _sanitize_filename(upload.filename or f"file_{i}.bin")
         folio_label = labels[i]
         page_id = _make_page_id(corpus.slug, folio_label, seq + i, dupes)
+
+        content = await upload.read()
+        # Validation taille
+        if len(content) > _MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Fichier trop volumineux ({len(content)} octets). Maximum : {_MAX_UPLOAD_BYTES}.",
+            )
 
         master_dir = (
             _config_module.settings.data_dir
@@ -221,8 +281,8 @@ async def ingest_files(
         )
         master_dir.mkdir(parents=True, exist_ok=True)
         master_path = master_dir / filename
-        content = await upload.read()
         master_path.write_bytes(content)
+        written_files.append(master_path)
 
         page = await _create_page(
             db, ms.id, page_id, folio_label, seq + i,
@@ -234,7 +294,13 @@ async def ingest_files(
             created.append(page)
 
     ms.total_pages = (ms.total_pages or 0) + len(created)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        # Nettoyage des fichiers orphelins si le commit BDD échoue
+        for f in written_files:
+            f.unlink(missing_ok=True)
+        raise
 
     logger.info(
         "Fichiers ingérés",
@@ -260,6 +326,8 @@ async def ingest_iiif_manifest(
 
     try:
         manifest = await _fetch_json_manifest(body.manifest_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except httpx.HTTPStatusError as exc:
         raise HTTPException(
             status_code=502,
@@ -302,7 +370,7 @@ async def ingest_iiif_manifest(
     seq = await _next_sequence(db, ms.id)
 
     # Collect labels and detect duplicates
-    labels = [_extract_canvas_label(canvas, i) for i, canvas in enumerate(canvases)]
+    labels = [_sanitize_label(_extract_canvas_label(canvas, i)) for i, canvas in enumerate(canvases)]
     dupes = _find_duplicate_labels(labels)
 
     created: list[PageModel] = []
@@ -358,11 +426,12 @@ async def ingest_iiif_images(
     ms = await _get_or_create_manuscript(db, corpus_id)
     seq = await _next_sequence(db, ms.id)
 
-    dupes = _find_duplicate_labels(body.folio_labels)
+    sanitized_labels = [_sanitize_label(lbl) for lbl in body.folio_labels]
+    dupes = _find_duplicate_labels(sanitized_labels)
 
     created: list[PageModel] = []
     skipped = 0
-    for i, (url, folio_label) in enumerate(zip(body.urls, body.folio_labels)):
+    for i, (url, folio_label) in enumerate(zip(body.urls, sanitized_labels)):
         page_id = _make_page_id(corpus.slug, folio_label, seq + i, dupes)
         page = await _create_page(
             db, ms.id, page_id, folio_label, seq + i,

@@ -10,7 +10,8 @@ Cycle de vie :
                    ↘ failed
 """
 # 1. stdlib
-from datetime import datetime
+from datetime import datetime, timezone
+from functools import partial
 
 # 2. third-party
 from sqlalchemy import DateTime, ForeignKey, String, Text
@@ -37,4 +38,6 @@ class JobModel(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=partial(datetime.now, tz=timezone.utc)
+    )

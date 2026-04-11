@@ -33,7 +33,7 @@ def _make_master(page_id: str, diplomatic_text: str = "", translation_fr: str = 
         "manuscript_id": "ms-test",
         "folio_label": "f001r",
         "sequence": 1,
-        "image": {"original_url": "https://example.com/f.jpg", "width": 1500, "height": 2000},
+        "image": {"master": "https://example.com/f.jpg", "width": 1500, "height": 2000},
         "layout": {"regions": []},
         "ocr": {
             "diplomatic_text": diplomatic_text,

@@ -208,10 +208,14 @@ class MistralProvider(AIProvider):
         # ── Chemin 1 : OCR dédié ─────────────────────────────────────────────
         if _is_ocr_model(model_id):
             logger.info("Mistral OCR : endpoint dédié client.ocr.process()", extra={"model": model_id})
-            response = client.ocr.process(
-                model=model_id,
-                document={"type": "image_url", "image_url": {"url": data_url}},
-            )
+            try:
+                response = client.ocr.process(
+                    model=model_id,
+                    document={"type": "image_url", "image_url": {"url": data_url}},
+                )
+            except Exception as exc:
+                logger.error("Appel Mistral OCR échoué", extra={"model": model_id, "error": str(exc)})
+                raise RuntimeError(f"Erreur API Mistral OCR ({model_id}) : {exc}") from exc
             # OCRResponse.pages : list[OCRPageObject], chacun avec .markdown
             pages = getattr(response, "pages", []) or []
             return "\n\n".join(
@@ -233,10 +237,14 @@ class MistralProvider(AIProvider):
             )
             content = prompt
 
-        response = client.chat.complete(
-            model=model_id,
-            messages=[{"role": "user", "content": content}],
-        )
+        try:
+            response = client.chat.complete(
+                model=model_id,
+                messages=[{"role": "user", "content": content}],
+            )
+        except Exception as exc:
+            logger.error("Appel Mistral chat échoué", extra={"model": model_id, "error": str(exc)})
+            raise RuntimeError(f"Erreur API Mistral ({model_id}) : {exc}") from exc
         choices = response.choices or []
         if not choices:
             return ""
