@@ -83,6 +83,10 @@ export interface Page {
   folio_label: string
   sequence: number
   image_master_path: string | null
+  iiif_service_url: string | null
+  canvas_width: number | null
+  canvas_height: number | null
+  manifest_url: string | null
   processing_status: string
   confidence_summary: number | null
 }
@@ -150,6 +154,8 @@ export interface ImageInfo {
   derivative_web?: string | null
   thumbnail?: string | null
   iiif_base?: string | null
+  iiif_service_url?: string | null
+  manifest_url?: string | null
   width: number
   height: number
 }

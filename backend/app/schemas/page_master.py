@@ -38,14 +38,23 @@ class Region(BaseModel):
 
 
 class ImageInfo(BaseModel):
-    """Métadonnées image — CLAUDE.md §4.2."""
+    """Métadonnées image — CLAUDE.md §4.2.
 
-    master: str
-    derivative_web: str | None = None
-    thumbnail: str | None = None
-    iiif_base: str | None = None
-    width: int
-    height: int
+    Supporte deux modes :
+    - IIIF natif : iiif_service_url renseigné, images streamées depuis le serveur
+      d'origine (pas de stockage local). derivative_web / thumbnail = None.
+    - Upload local : master = chemin local, derivative_web / thumbnail = chemins
+      des dérivés sur disque (mode legacy ou upload de fichiers).
+    """
+
+    master: str                           # URL source (service IIIF ou statique) ou chemin local
+    derivative_web: str | None = None     # chemin dérivé 1500px (legacy/upload)
+    thumbnail: str | None = None          # chemin thumbnail 256px (legacy/upload)
+    iiif_base: str | None = None          # compat arrière
+    iiif_service_url: str | None = None   # URL du IIIF Image Service (zoom tuilé)
+    manifest_url: str | None = None       # URL du manifest source (provenance)
+    width: int                            # largeur du canvas original
+    height: int                           # hauteur du canvas original
 
 
 class OCRResult(BaseModel):

@@ -300,3 +300,85 @@ def test_annotation_layer_all_layer_types():
             created_at=datetime(2026, 3, 16, tzinfo=timezone.utc),
         )
         assert layer.layer_type == layer_type
+
+
+# ---------------------------------------------------------------------------
+# ImageInfo — compatibilité arrière et champs IIIF natifs
+# ---------------------------------------------------------------------------
+
+from app.schemas.page_master import ImageInfo
+from app.schemas.image import ImageSourceInfo
+
+
+def test_image_info_backward_compat_without_iiif_fields():
+    """Un ImageInfo sans les nouveaux champs IIIF doit toujours valider."""
+    info = ImageInfo.model_validate({
+        "master": "data/corpora/test/masters/0001r.tif",
+        "derivative_web": "data/corpora/test/derivatives/0001r.jpg",
+        "width": 2000,
+        "height": 3000,
+    })
+    assert info.iiif_service_url is None
+    assert info.manifest_url is None
+
+
+def test_image_info_with_iiif_service_url():
+    """Un ImageInfo avec iiif_service_url doit valider."""
+    info = ImageInfo.model_validate({
+        "master": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29/full/max/0/default.jpg",
+        "iiif_service_url": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29",
+        "manifest_url": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/manifest.json",
+        "width": 3543,
+        "height": 4724,
+    })
+    assert info.iiif_service_url == "https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29"
+    assert info.manifest_url is not None
+    assert info.derivative_web is None
+    assert info.thumbnail is None
+
+
+def test_image_info_iiif_native_no_local_paths():
+    """En mode IIIF natif, derivative_web et thumbnail sont None."""
+    info = ImageInfo(
+        master="https://example.com/image.jpg",
+        iiif_service_url="https://example.com/iiif/img1",
+        width=5000,
+        height=7000,
+    )
+    assert info.derivative_web is None
+    assert info.thumbnail is None
+    assert info.width == 5000
+    assert info.height == 7000
+
+
+def test_page_master_backward_compat_v10(minimal_page_master):
+    """Un PageMaster v1.0 (sans champs IIIF) doit toujours valider."""
+    pm = PageMaster.model_validate(minimal_page_master)
+    assert pm.schema_version == "1.0"
+    assert pm.image.iiif_service_url is None
+
+
+def test_image_source_info_iiif():
+    """ImageSourceInfo avec service IIIF détecté."""
+    info = ImageSourceInfo(
+        original_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29/full/max/0/default.jpg",
+        iiif_service_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29",
+        manifest_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/manifest.json",
+        is_iiif=True,
+        original_width=3543,
+        original_height=4724,
+    )
+    assert info.is_iiif is True
+    assert "gallica" in info.iiif_service_url
+
+
+def test_image_source_info_static_fallback():
+    """ImageSourceInfo sans service IIIF (image statique)."""
+    info = ImageSourceInfo(
+        original_url="https://example.com/static/page1.jpg",
+        is_iiif=False,
+        original_width=2000,
+        original_height=3000,
+    )
+    assert info.is_iiif is False
+    assert info.iiif_service_url is None
