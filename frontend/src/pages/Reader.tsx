@@ -34,12 +34,19 @@ export default function Reader() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([fetchPages(manuscriptId), fetchProfile(profileId)])
+    const loadPages = fetchPages(manuscriptId)
+    const loadProfile = profileId
+      ? fetchProfile(profileId).catch(() => null)
+      : Promise.resolve(null)
+
+    Promise.all([loadPages, loadProfile])
       .then(([pgs, prof]) => {
         const sorted = [...pgs].sort((a, b) => a.sequence - b.sequence)
         setPages(sorted)
-        setProfile(prof)
-        setVisibleLayers(new Set(prof.active_layers))
+        if (prof) {
+          setProfile(prof)
+          setVisibleLayers(new Set(prof.active_layers))
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))

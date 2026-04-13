@@ -40,8 +40,13 @@ _ALLOWED_MIME_PREFIXES = ("image/",)
 
 
 def _sanitize_label(label: str) -> str:
-    """Nettoie un folio_label : garde uniquement alphanum, -, _, ."""
+    """Nettoie un folio_label : garde uniquement alphanum, -, _, .
+
+    Les points en début/fin sont supprimés pour éviter des IDs de page
+    se terminant par un point (problèmes de routing et de chemins fichier).
+    """
     clean = Path(label).name  # retire tout chemin
+    clean = clean.strip(".")  # supprimer les points en début/fin
     if not _SAFE_LABEL_RE.match(clean) or not clean:
         clean = re.sub(r"[^\w\-\.]", "_", clean) or "page"
     return clean
