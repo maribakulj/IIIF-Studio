@@ -154,7 +154,8 @@ export default function Editor() {
     )
   }
 
-  const imageUrl = master?.image?.derivative_web ?? master?.image?.master ?? ''
+  const iiifServiceUrl = master?.image?.iiif_service_url ?? null
+  const fallbackImageUrl = master?.image?.derivative_web ?? master?.image?.master ?? ''
   const regions = master?.layout?.regions ?? []
 
   return (
@@ -194,8 +195,8 @@ export default function Editor() {
           className="flex-1 min-w-0"
         >
           <div className="relative w-full h-full">
-            <Viewer imageUrl={imageUrl} onViewerReady={() => {}} />
-            {!imageUrl && (
+            <Viewer iiifServiceUrl={iiifServiceUrl} fallbackImageUrl={fallbackImageUrl} onViewerReady={() => {}} />
+            {!iiifServiceUrl && !fallbackImageUrl && (
               <div className="absolute inset-0 flex items-center justify-center bg-retro-gray text-retro-darkgray text-retro-sm">
                 Apercu non disponible
               </div>

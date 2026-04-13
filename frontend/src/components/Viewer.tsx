@@ -3,14 +3,16 @@ import OpenSeadragon from 'openseadragon'
 import { RetroButton } from './retro'
 
 interface Props {
-  imageUrl: string
+  /** URL du IIIF Image Service (zoom tuilé natif) */
+  iiifServiceUrl?: string | null
+  /** URL image statique (fallback si pas de service IIIF) */
+  fallbackImageUrl?: string | null
   onViewerReady?: (viewer: OpenSeadragon.Viewer) => void
 }
 
-const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
+const Viewer: FC<Props> = ({ iiifServiceUrl, fallbackImageUrl, onViewerReady }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null)
-  // Ref pour toujours accéder au callback le plus récent (évite stale closure)
   const onViewerReadyRef = useRef(onViewerReady)
   onViewerReadyRef.current = onViewerReady
 
@@ -25,6 +27,7 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
       animationTime: 0.3,
       minZoomLevel: 0.1,
       maxZoomLevel: 20,
+      crossOriginPolicy: 'Anonymous',
     })
 
     viewerRef.current = viewer
@@ -35,15 +38,25 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
     }
   }, [])
 
+  // Source à ouvrir : préférer le service IIIF (zoom tuilé), sinon image statique
+  const source = iiifServiceUrl || fallbackImageUrl || ''
+
   useEffect(() => {
     const viewer = viewerRef.current
-    if (!viewer || !imageUrl) return
+    if (!viewer || !source) return
 
-    viewer.open({ type: 'image', url: imageUrl })
+    if (iiifServiceUrl) {
+      // Zoom tuilé natif — OpenSeadragon fetch info.json et configure les tuiles
+      viewer.open(iiifServiceUrl + '/info.json')
+    } else {
+      // Image statique simple (pas de zoom tuilé)
+      viewer.open({ type: 'image', url: source })
+    }
+
     viewer.addOnceHandler('open', () => {
       onViewerReadyRef.current?.(viewer)
     })
-  }, [imageUrl])
+  }, [source, iiifServiceUrl])
 
   return (
     <div className="relative w-full h-full bg-retro-black">

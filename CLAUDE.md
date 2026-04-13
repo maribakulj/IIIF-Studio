@@ -159,9 +159,12 @@ iiif-studio/
 ├── data/                            ← JAMAIS versionné (.gitignore)
 │   └── corpora/
 │       └── {corpus_slug}/
-│           ├── masters/             ← images sources originales
-│           ├── derivatives/         ← JPEG 1500px pour l'IA
-│           ├── thumbnails/          ← aperçus 300px
+│           ├── masters/             ← images uploadées (mode fichier uniquement)
+│           ├── derivatives/         ← JPEG 1500px (mode fichier uniquement)
+│           ├── thumbnails/          ← aperçus 300px (mode fichier uniquement)
+│           │   NOTE : en mode IIIF natif, masters/, derivatives/ et
+│           │   thumbnails/ sont VIDES — les images sont streamées
+│           │   depuis le serveur IIIF d'origine.
 │           ├── iiif/
 │           │   ├── manifest.json
 │           │   └── annotations/

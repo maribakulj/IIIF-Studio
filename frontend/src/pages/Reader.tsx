@@ -122,7 +122,8 @@ export default function Reader() {
   }
 
   const currentPage = pages[currentIndex]
-  const imageUrl = currentPage.image_master_path ?? ''
+  const iiifServiceUrl = currentPage.iiif_service_url ?? null
+  const fallbackImageUrl = currentPage.image_master_path ?? ''
   const regions: Region[] = master?.layout?.regions ?? []
 
   return (
@@ -168,12 +169,12 @@ export default function Reader() {
           statusBar={
             master
               ? `${master.editorial.status} — v${master.editorial.version}`
-              : imageUrl ? 'Page non analysee' : 'Aucune image'
+              : (iiifServiceUrl || fallbackImageUrl) ? 'Page non analysee' : 'Aucune image'
           }
           className="flex-[7] min-w-0"
         >
           <div className="relative w-full h-full">
-            <Viewer imageUrl={imageUrl} onViewerReady={handleViewerReady} />
+            <Viewer iiifServiceUrl={iiifServiceUrl} fallbackImageUrl={fallbackImageUrl} onViewerReady={handleViewerReady} />
             <RegionOverlay
               viewer={osdViewer}
               regions={regions}
@@ -211,7 +212,7 @@ export default function Reader() {
             )}
 
             {/* Not analyzed / error badge */}
-            {!master && !loading && imageUrl && (
+            {!master && !loading && (iiifServiceUrl || fallbackImageUrl) && (
               <div className="absolute top-2 left-2">
                 {masterError
                   ? <RetroBadge variant="error">Erreur: {masterError}</RetroBadge>
@@ -261,7 +262,7 @@ export default function Reader() {
               </div>
             ) : (
               <div className="p-3 text-retro-sm text-retro-darkgray">
-                {imageUrl
+                {(iiifServiceUrl || fallbackImageUrl)
                   ? 'Page non encore analysee par l\'IA.'
                   : 'Aucune image associee a cette page.'
                 }

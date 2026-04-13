@@ -108,6 +108,23 @@ def generate_manifest(
         annotation_page_id = f"{canvas_id}/annotation-page/1"
         annotation_id      = f"{canvas_id}/annotation/painting"
         image_url          = page.image.master or ""
+        iiif_svc           = page.image.iiif_service_url
+
+        # Corps de l'annotation painting
+        body: dict = {
+            "id":     image_url,
+            "type":   "Image",
+            "format": "image/jpeg",
+            "width":  width,
+            "height": height,
+        }
+        # Si un IIIF Image Service est connu, le déclarer (zoom tuilé natif)
+        if iiif_svc:
+            body["service"] = [{
+                "id":      iiif_svc,
+                "type":    "ImageService3",
+                "profile": "level2",
+            }]
 
         canvas: dict = {
             "id":     canvas_id,
@@ -124,14 +141,8 @@ def generate_manifest(
                             "id":         annotation_id,
                             "type":       "Annotation",
                             "motivation": "painting",
-                            "body": {
-                                "id":     image_url,
-                                "type":   "Image",
-                                "format": "image/jpeg",
-                                "width":  width,
-                                "height": height,
-                            },
-                            "target": canvas_id,
+                            "body":       body,
+                            "target":     canvas_id,
                         }
                     ],
                 }
