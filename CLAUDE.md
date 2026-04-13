@@ -38,34 +38,36 @@ latin carolingien, XIe siècle). Le Beatus est un profil parmi d'autres — pas 
 
 ```toml
 [project]
-name = "iiif-studio"
-version = "0.1.0"
+name = "iiif-studio-backend"
+version = "0.2.0"
 requires-python = ">=3.11"
 
 dependencies = [
-    "pydantic>=2.0",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.7",
     "pydantic-settings>=2.0",
-    "fastapi>=0.104",
-    "uvicorn>=0.24",
-    "python-multipart>=0.0.6",
-    "google-genai>=0.3",
-    "lxml>=4.9",
-    "Pillow>=10.0",
-    "httpx>=0.25",
     "sqlalchemy>=2.0",
-    "aiosqlite>=0.19",
+    "aiosqlite>=0.20",
+    "google-genai>=1.0",
+    "google-auth>=2.0",
+    "httpx>=0.27",
+    "lxml>=5.2",
+    "Pillow>=10.3",
+    "python-multipart>=0.0.9",
+    "mistralai>=1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-asyncio>=0.21",
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.23",
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 asyncio_mode = "auto"
+testpaths = ["tests"]
 ```
 
 ---
@@ -170,8 +172,20 @@ iiif-studio/
 │                   ├── alto.xml
 │                   └── annotations.json
 │
+├── frontend/                        ← React + TypeScript + Vite
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   ├── lib/api.ts               ← client API typé
+│   │   ├── pages/                   ← Home, Reader, Editor, Admin
+│   │   └── components/              ← Viewer, retro/, SearchBar, etc.
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── Dockerfile                       ← multi-stage (frontend + backend)
+│
 └── infra/
-    └── Dockerfile
+    └── docker-compose.yml           ← dev local uniquement
 ```
 
 ---

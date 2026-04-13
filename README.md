@@ -26,12 +26,13 @@ iiif-studio/
 │   │   ├── models/     # tables SQLAlchemy (SQLite async)
 │   │   ├── schemas/    # modèles Pydantic v2
 │   │   └── services/   # ingest / image / ai / export / search
-│   ├── tests/          # suite pytest (477 tests)
+│   ├── tests/          # suite pytest (563 tests)
 │   └── pyproject.toml
+├── frontend/           # React + TypeScript + Vite (design rétro)
 ├── profiles/           # 4 profils de corpus JSON
 ├── prompts/            # templates de prompts par profil
-├── infra/              # Dockerfile + docker-compose (dev local)
-├── Dockerfile          # copie du Dockerfile pour HuggingFace Spaces
+├── infra/              # docker-compose (dev local)
+├── Dockerfile          # image multi-stage (frontend + backend)
 └── data/               # artefacts runtime — NON versionné
 ```
 
@@ -66,7 +67,7 @@ pip install -e ".[dev]"
 pytest tests/ -v --cov=app
 ```
 
-Résultat attendu : **477 passed, 3 skipped**.
+Résultat attendu : **563 passed, 3 skipped**.
 
 ---
 
@@ -86,15 +87,20 @@ curl http://localhost:7860/api/v1/profiles
 
 ---
 
-## Providers Google AI
+## Providers IA
 
-Trois modes d'authentification sont supportés. Sélectionner via `AI_PROVIDER`.
+Le backend détecte automatiquement quels providers sont disponibles selon les
+variables d'environnement présentes. Pas de sélecteur global `AI_PROVIDER` —
+le modèle est choisi par corpus depuis l'interface d'administration.
 
-| Provider | Variable `AI_PROVIDER` | Variables d'environnement requises |
-|----------|------------------------|-------------------------------------|
-| Google AI Studio (clé API) | `google_ai_studio` | `GOOGLE_AI_STUDIO_API_KEY` |
-| Google AI API (legacy) | `google_ai_api` | `GOOGLE_AI_API_KEY` |
-| Google Vertex AI | `google_vertex` | `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` |
+| Provider | Variable d'environnement |
+|----------|--------------------------|
+| Google AI Studio | `GOOGLE_AI_STUDIO_API_KEY` |
+| Vertex AI (clé API) | `VERTEX_API_KEY` |
+| Vertex AI (compte de service) | `VERTEX_SERVICE_ACCOUNT_JSON` |
+| Mistral AI | `MISTRAL_API_KEY` |
+
+Au moins **une** clé est nécessaire pour que le pipeline fonctionne.
 
 Les clés ne doivent **jamais** figurer dans le code, les commits ou l'image Docker.
 Sur HuggingFace Spaces, les renseigner dans **Settings → Repository secrets**.
