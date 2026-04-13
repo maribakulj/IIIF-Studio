@@ -663,8 +663,9 @@ def test_run_primary_analysis_image_dict(tmp_path):
         )
 
     assert result.image.master == image_info.original_url
-    assert result.image.width == image_info.derivative_width
-    assert result.image.height == image_info.derivative_height
+    # L'analyzer stocke désormais les dimensions originales (pas celles du dérivé)
+    assert result.image.width == image_info.original_width
+    assert result.image.height == image_info.original_height
 
 
 def test_run_primary_analysis_regions_in_layout(tmp_path):
@@ -866,3 +867,98 @@ def test_run_primary_analysis_invalid_region_skipped(tmp_path):
 
     assert len(result.layout["regions"]) == 1
     assert result.layout["regions"][0]["id"] == "r_good"
+
+
+# ---------------------------------------------------------------------------
+# Mode IIIF natif — bytes en mémoire
+# ---------------------------------------------------------------------------
+
+from app.schemas.image import ImageSourceInfo
+
+
+def _make_image_source_info() -> ImageSourceInfo:
+    return ImageSourceInfo(
+        original_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29/full/max/0/default.jpg",
+        iiif_service_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29",
+        manifest_url="https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/manifest.json",
+        is_iiif=True,
+        original_width=3543,
+        original_height=4724,
+    )
+
+
+def test_run_primary_analysis_iiif_bytes_mode(tmp_path):
+    """Mode IIIF natif : passe des bytes directement, pas de chemin fichier."""
+    prompt_rel = "prompts/medieval-illuminated/primary_v1.txt"
+    _setup_prompt_file(tmp_path, prompt_rel)
+
+    jpeg_bytes = _make_jpeg_bytes(200, 300)
+    mock_provider = _make_mock_provider(_valid_ai_json())
+
+    with patch("app.services.ai.analyzer.get_provider", return_value=mock_provider):
+        result = run_primary_analysis(
+            derivative_image_bytes=jpeg_bytes,
+            derivative_width=200,
+            derivative_height=300,
+            corpus_profile=_make_corpus_profile(prompt_rel_path=prompt_rel),
+            model_config=_make_model_config(),
+            page_id="test-iiif-0001r",
+            manuscript_id="ms-test",
+            corpus_slug="test-corpus",
+            folio_label="0001r",
+            sequence=1,
+            image_info=_make_image_source_info(),
+            base_data_dir=tmp_path / "data",
+            project_root=tmp_path,
+        )
+
+    assert result.image.iiif_service_url == "https://gallica.bnf.fr/iiif/ark:/12148/btv1b8432314s/f29"
+    assert result.image.manifest_url is not None
+    assert result.image.derivative_web is None
+    assert result.image.width == 3543  # dimensions originales, pas dérivé
+    assert result.image.height == 4724
+
+
+def test_run_primary_analysis_iiif_bbox_scaling(tmp_path):
+    """Les bbox sont mises à l'échelle du dérivé vers le canvas original."""
+    prompt_rel = "prompts/medieval-illuminated/primary_v1.txt"
+    _setup_prompt_file(tmp_path, prompt_rel)
+
+    # Image source : 4000x6000 original, dérivé 1000x1500
+    source_info = ImageSourceInfo(
+        original_url="https://example.com/img",
+        iiif_service_url="https://example.com/img",
+        is_iiif=True,
+        original_width=4000,
+        original_height=6000,
+    )
+
+    # Réponse IA avec bbox dans l'espace du dérivé (1000x1500)
+    ai_response = json.dumps({
+        "layout": {"regions": [
+            {"id": "r1", "type": "text_block", "bbox": [100, 200, 500, 300], "confidence": 0.9},
+        ]},
+        "ocr": {"diplomatic_text": "test", "language": "la", "confidence": 0.8},
+    })
+    mock_provider = _make_mock_provider(ai_response)
+
+    with patch("app.services.ai.analyzer.get_provider", return_value=mock_provider):
+        result = run_primary_analysis(
+            derivative_image_bytes=_make_jpeg_bytes(100, 150),
+            derivative_width=1000,
+            derivative_height=1500,
+            corpus_profile=_make_corpus_profile(prompt_rel_path=prompt_rel),
+            model_config=_make_model_config(),
+            page_id="test-scale-0001r",
+            manuscript_id="ms-test",
+            corpus_slug="test-corpus",
+            folio_label="0001r",
+            sequence=1,
+            image_info=source_info,
+            base_data_dir=tmp_path / "data",
+            project_root=tmp_path,
+        )
+
+    # Scale factor : 4000/1000 = 4.0, 6000/1500 = 4.0
+    bbox = result.layout["regions"][0]["bbox"]
+    assert bbox == [400, 800, 2000, 1200]  # 100*4, 200*4, 500*4, 300*4
