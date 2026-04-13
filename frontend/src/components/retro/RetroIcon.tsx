@@ -20,6 +20,7 @@ export default function RetroIcon({
 }: Props) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`
         flex flex-col items-center gap-1
@@ -27,7 +28,6 @@ export default function RetroIcon({
         cursor-pointer select-none
         ${className}
       `}
-      onDoubleClick={onClick}
     >
       {/* Icon box */}
       <div

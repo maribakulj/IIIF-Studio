@@ -574,11 +574,12 @@ export default function Admin({ onHome }: Props) {
         ]}
       />
 
-      <div className="flex flex-1 overflow-hidden p-1 gap-1">
+      <div className="flex flex-1 min-h-0 overflow-hidden p-1 gap-1">
         {/* Sidebar */}
         <RetroWindow title="Corpus" className="w-56 shrink-0" scrollable>
           <div className="flex flex-col">
             <button
+              type="button"
               onClick={() => { setShowCreate(true); setSelectedCorpusId(null) }}
               className={`
                 w-full text-left px-2 py-[4px] text-retro-sm font-bold
@@ -593,6 +594,7 @@ export default function Admin({ onHome }: Props) {
             )}
             {corpora.map((c) => (
               <button
+                type="button"
                 key={c.id}
                 onClick={() => { setSelectedCorpusId(c.id); setShowCreate(false) }}
                 className={`

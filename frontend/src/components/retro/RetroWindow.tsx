@@ -29,7 +29,7 @@ export default function RetroWindow({
   return (
     <div
       className={`
-        flex flex-col
+        flex flex-col min-h-0
         border-retro border-retro-black bg-retro-gray
         shadow-retro
         ${className}
@@ -45,6 +45,7 @@ export default function RetroWindow({
       >
         {onClose && (
           <button
+            type="button"
             onClick={onClose}
             className="
               w-[14px] h-[14px] flex items-center justify-center

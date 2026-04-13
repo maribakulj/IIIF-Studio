@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import AdminNav from '../components/AdminNav.tsx'
 import SearchBar from '../components/SearchBar.tsx'
 import { RetroMenuBar, RetroWindow, RetroIcon } from '../components/retro'
 import {
@@ -94,15 +93,10 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
       <RetroMenuBar
         items={[
           { label: 'IIIF Studio' },
-          { label: 'Fichier' },
-          { label: 'Corpus' },
-          { label: 'Aide' },
+          { label: 'Administration', onClick: onAdmin },
         ]}
         right={
-          <div className="flex items-center gap-1">
-            <SearchBar onSelectResult={onOpenPage ? (r) => onOpenPage(r.page_id) : undefined} />
-            <AdminNav onClick={onAdmin} />
-          </div>
+          <SearchBar onSelectResult={onOpenPage ? (r) => onOpenPage(r.page_id) : undefined} />
         }
       />
 
@@ -126,6 +120,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
                 {corpora.map((corpus) => (
                   <div key={corpus.id}>
                     <button
+                      type="button"
                       onClick={() => void handleCorpusClick(corpus)}
                       className={`
                         w-full text-left px-3 py-[6px] flex items-center gap-3
@@ -172,6 +167,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
               <div className="divide-y divide-retro-gray">
                 {selectedMs.map((ms) => (
                   <button
+                    type="button"
                     key={ms.id}
                     onClick={() => onOpenManuscript(ms.id, selectedCorpus.profile_id)}
                     className="

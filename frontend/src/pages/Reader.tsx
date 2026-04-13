@@ -144,7 +144,7 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
       />
 
       {/* ── Main content ───────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden p-1 gap-1">
+      <div className="flex flex-1 min-h-0 overflow-hidden p-1 gap-1">
 
         {/* ── Viewer window (left, 70%) ──────────────────────────── */}
         <RetroWindow
@@ -179,6 +179,7 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
                     {selectedRegion.type.replace(/_/g, ' ')}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setSelectedRegion(null)}
                     className="text-retro-black font-bold hover:bg-retro-black hover:text-retro-white px-1"
                   >

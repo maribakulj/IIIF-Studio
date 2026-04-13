@@ -96,6 +96,7 @@ export default function SearchBar({ onSelectResult }: Props) {
               {results.map((r) => (
                 <li key={r.page_id}>
                   <button
+                    type="button"
                     onClick={() => {
                       setOpen(false)
                       onSelectResult?.(r)
