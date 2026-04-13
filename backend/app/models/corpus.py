@@ -74,6 +74,10 @@ class PageModel(Base):
     folio_label: Mapped[str] = mapped_column(String, nullable=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     image_master_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    iiif_service_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    canvas_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    canvas_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    manifest_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_status: Mapped[str] = mapped_column(
         String, nullable=False, default="CREATED"
     )

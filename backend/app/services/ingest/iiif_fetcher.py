@@ -48,3 +48,38 @@ def fetch_iiif_image(url: str, timeout: float = _DEFAULT_TIMEOUT) -> bytes:
         extra={"url": url, "size_bytes": len(response.content)},
     )
     return response.content
+
+
+def fetch_iiif_derivative(
+    service_url: str,
+    max_px: int = 1500,
+    timeout: float = _DEFAULT_TIMEOUT,
+) -> bytes:
+    """Télécharge un dérivé via l'IIIF Image API — jamais stocké sur disque.
+
+    Construit l'URL : {service_url}/full/!{max_px},{max_px}/0/default.jpg
+    Le serveur IIIF retourne une image redimensionnée côté serveur.
+
+    Args:
+        service_url: URL du IIIF Image Service (sans le suffix /full/.../default.jpg).
+        max_px: taille max du grand côté (défaut : 1500).
+        timeout: délai maximal en secondes.
+
+    Returns:
+        Contenu brut de l'image JPEG en bytes.
+    """
+    # Pattern IIIF Image API : !w,h = "best fit" (le serveur choisit)
+    derivative_url = f"{service_url.rstrip('/')}/full/!{max_px},{max_px}/0/default.jpg"
+    logger.info("Fetching IIIF derivative", extra={"url": derivative_url, "max_px": max_px})
+    response = httpx.get(
+        derivative_url,
+        headers=_HEADERS,
+        follow_redirects=True,
+        timeout=httpx.Timeout(timeout, connect=10.0),
+    )
+    response.raise_for_status()
+    logger.info(
+        "IIIF derivative fetched",
+        extra={"url": derivative_url, "size_bytes": len(response.content)},
+    )
+    return response.content

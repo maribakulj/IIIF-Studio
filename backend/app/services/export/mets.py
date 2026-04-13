@@ -178,20 +178,28 @@ def generate_mets(
     for page in pages:
         sid = _safe_id(page.page_id)
 
-        # master image
+        # master image (IIIF service URL ou URL statique)
+        master_url = page.image.iiif_service_url or page.image.master or ""
+        if page.image.iiif_service_url:
+            master_url = f"{page.image.iiif_service_url}/full/max/0/default.jpg"
         f_master = _el(grp_master, f"{_M}file", {"ID": f"IMG_MASTER_{sid}", "MIMETYPE": "image/jpeg"})
         _el(f_master, f"{_M}FLocat", {
             "LOCTYPE": "URL",
-            f"{_XL}href": page.image.master or "",
+            f"{_XL}href": master_url,
             f"{_XL}type": "simple",
         })
 
-        # dérivé web
+        # dérivé web (URL IIIF 1500px ou chemin local legacy)
+        if page.image.iiif_service_url:
+            deriv_href = f"{page.image.iiif_service_url}/full/!1500,1500/0/default.jpg"
+            deriv_loctype_attrs = {"LOCTYPE": "URL"}
+        else:
+            deriv_href = page.image.derivative_web or ""
+            deriv_loctype_attrs = {"LOCTYPE": "OTHER", "OTHERLOCTYPE": "filepath"}
         f_deriv = _el(grp_deriv, f"{_M}file", {"ID": f"IMG_DERIV_{sid}", "MIMETYPE": "image/jpeg"})
         _el(f_deriv, f"{_M}FLocat", {
-            "LOCTYPE": "OTHER",
-            "OTHERLOCTYPE": "filepath",
-            f"{_XL}href": page.image.derivative_web or "",
+            **deriv_loctype_attrs,
+            f"{_XL}href": deriv_href,
             f"{_XL}type": "simple",
         })
 

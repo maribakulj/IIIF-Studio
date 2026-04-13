@@ -64,6 +64,10 @@ class PageResponse(BaseModel):
     folio_label: str
     sequence: int
     image_master_path: str | None
+    iiif_service_url: str | None = None
+    canvas_width: int | None = None
+    canvas_height: int | None = None
+    manifest_url: str | None = None
     processing_status: str
     confidence_summary: float | None
 

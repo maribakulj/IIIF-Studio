@@ -32,8 +32,13 @@ from app.models.database import async_session_factory
 from app.models.job import JobModel
 from app.models.model_config_db import ModelConfigDB
 from app.schemas.corpus_profile import CorpusProfile
+from app.schemas.image import ImageSourceInfo
 from app.schemas.model_config import ModelConfig, ProviderType
-from app.services.image.normalizer import create_derivatives, fetch_and_normalize
+from app.services.image.normalizer import (
+    create_derivatives,
+    fetch_ai_derivative_bytes,
+    fetch_and_normalize,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,19 +131,65 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             available_models=[],
         )
 
-        # ── 5. Normaliser l'image ────────────────────────────────────────────
+        # ── 5. Obtenir l'image pour l'IA ─────────────────────────────────────
         data_dir = _config_module.settings.data_dir
         image_source = page.image_master_path or ""
 
-        if image_source.startswith(("http://", "https://")):
+        from app.services.ai.analyzer import run_primary_analysis
+
+        if page.iiif_service_url:
+            # ── Mode IIIF natif : fetch en mémoire, zéro stockage ────────────
+            deriv_bytes, deriv_w, deriv_h = fetch_ai_derivative_bytes(
+                iiif_service_url=page.iiif_service_url,
+                fallback_url=None,
+            )
+            image_source_info = ImageSourceInfo(
+                original_url=image_source or page.iiif_service_url,
+                iiif_service_url=page.iiif_service_url,
+                manifest_url=page.manifest_url,
+                is_iiif=True,
+                original_width=page.canvas_width or deriv_w,
+                original_height=page.canvas_height or deriv_h,
+            )
+
+            # ── 6. Analyse primaire IA (R05 : double stockage) ───────────────
+            page_master = run_primary_analysis(
+                derivative_image_bytes=deriv_bytes,
+                derivative_width=deriv_w,
+                derivative_height=deriv_h,
+                corpus_profile=corpus_profile,
+                model_config=model_config,
+                page_id=page.id,
+                manuscript_id=manuscript.id,
+                corpus_slug=corpus.slug,
+                folio_label=page.folio_label,
+                sequence=page.sequence,
+                image_info=image_source_info,
+                base_data_dir=data_dir,
+                project_root=_PROJECT_ROOT,
+            )
+
+        elif image_source.startswith(("http://", "https://")):
+            # ── Mode fallback URL : télécharge + stocke sur disque (legacy) ──
             image_info = fetch_and_normalize(
                 image_source, corpus.slug, page.folio_label, data_dir
             )
+            page_master = run_primary_analysis(
+                derivative_image_path=Path(image_info.derivative_path),
+                corpus_profile=corpus_profile,
+                model_config=model_config,
+                page_id=page.id,
+                manuscript_id=manuscript.id,
+                corpus_slug=corpus.slug,
+                folio_label=page.folio_label,
+                sequence=page.sequence,
+                image_info=image_info,
+                base_data_dir=data_dir,
+                project_root=_PROJECT_ROOT,
+            )
+
         elif image_source:
-            # Validation anti path-traversal : le chemin résolu doit être
-            # sous data_dir. Empêche la lecture de fichiers arbitraires
-            # si image_master_path contient des séquences ../ ou un
-            # chemin absolu hors du répertoire de données.
+            # ── Mode fichier local (upload) ──────────────────────────────────
             source_path = Path(image_source).resolve()
             data_dir_resolved = data_dir.resolve()
             if not str(source_path).startswith(str(data_dir_resolved) + "/") and source_path != data_dir_resolved:
@@ -150,28 +201,25 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             image_info = create_derivatives(
                 source_bytes, image_source, corpus.slug, page.folio_label, data_dir
             )
+            page_master = run_primary_analysis(
+                derivative_image_path=Path(image_info.derivative_path),
+                corpus_profile=corpus_profile,
+                model_config=model_config,
+                page_id=page.id,
+                manuscript_id=manuscript.id,
+                corpus_slug=corpus.slug,
+                folio_label=page.folio_label,
+                sequence=page.sequence,
+                image_info=image_info,
+                base_data_dir=data_dir,
+                project_root=_PROJECT_ROOT,
+            )
+
         else:
             raise ValueError(
                 f"La page {page.id} n'a pas d'image source "
-                "(image_master_path vide ou None)"
+                "(ni iiif_service_url, ni image_master_path)"
             )
-
-        # ── 6. Analyse primaire IA (R05 : double stockage) ───────────────────
-        from app.services.ai.analyzer import run_primary_analysis
-
-        page_master = run_primary_analysis(
-            derivative_image_path=Path(image_info.derivative_path),
-            corpus_profile=corpus_profile,
-            model_config=model_config,
-            page_id=page.id,
-            manuscript_id=manuscript.id,
-            corpus_slug=corpus.slug,
-            folio_label=page.folio_label,
-            sequence=page.sequence,
-            image_info=image_info,
-            base_data_dir=data_dir,
-            project_root=_PROJECT_ROOT,
-        )
 
         # ── 7. Générer et écrire l'ALTO XML ──────────────────────────────────
         from app.services.export.alto import generate_alto, write_alto

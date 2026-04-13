@@ -11,7 +11,7 @@ from pathlib import Path
 
 # 3. local
 from app.schemas.corpus_profile import CorpusProfile
-from app.schemas.image import ImageDerivativeInfo
+from app.schemas.image import ImageDerivativeInfo, ImageSourceInfo
 from app.schemas.model_config import ModelConfig
 from app.schemas.page_master import EditorialInfo, EditorialStatus, ImageInfo, PageMaster, ProcessingInfo
 from app.services.ai.master_writer import write_ai_raw, write_master_json
@@ -22,8 +22,32 @@ from app.services.ai.response_parser import ParseError, parse_ai_response  # noq
 logger = logging.getLogger(__name__)
 
 
+def _scale_bbox_coordinates(layout: dict, scale_x: float, scale_y: float) -> dict:
+    """Met à l'échelle les bbox de l'espace dérivé vers l'espace canvas original.
+
+    L'IA analyse un dérivé 1500px mais les coordonnées dans master.json
+    doivent être en pixels absolus du canvas original (convention IIIF).
+    """
+    if abs(scale_x - 1.0) < 0.01 and abs(scale_y - 1.0) < 0.01:
+        return layout  # pas de scaling nécessaire
+
+    regions = layout.get("regions", [])
+    for region in regions:
+        bbox = region.get("bbox")
+        if bbox and len(bbox) == 4:
+            region["bbox"] = [
+                round(bbox[0] * scale_x),
+                round(bbox[1] * scale_y),
+                round(bbox[2] * scale_x),
+                round(bbox[3] * scale_y),
+            ]
+    return layout
+
+
 def run_primary_analysis(
-    derivative_image_path: Path,
+    *,
+    derivative_image_bytes: bytes | None = None,
+    derivative_image_path: Path | None = None,
     corpus_profile: CorpusProfile,
     model_config: ModelConfig,
     page_id: str,
@@ -31,38 +55,22 @@ def run_primary_analysis(
     corpus_slug: str,
     folio_label: str,
     sequence: int,
-    image_info: ImageDerivativeInfo,
+    image_info: ImageDerivativeInfo | ImageSourceInfo,
+    derivative_width: int | None = None,
+    derivative_height: int | None = None,
     base_data_dir: Path = Path("data"),
     project_root: Path = Path("."),
 ) -> PageMaster:
     """Analyse primaire d'un folio : charge le prompt, appelle l'IA, écrit les fichiers.
 
-    Respecte R05 : ai_raw.json est toujours écrit en premier, même en cas
-    d'erreur de parsing. master.json n'est écrit QUE si le parsing a réussi.
+    Supporte deux modes :
+    - IIIF natif : derivative_image_bytes fourni (bytes en RAM, jamais sur disque)
+    - Legacy : derivative_image_path fourni (chemin fichier sur disque)
 
-    Le provider est sélectionné dynamiquement depuis model_config.provider ;
-    Google AI Studio, Vertex et Mistral sont supportés de façon identique.
+    Respecte R05 : ai_raw.json toujours écrit en premier.
 
-    Args:
-        derivative_image_path: chemin vers le JPEG dérivé (1500px max).
-        corpus_profile: profil du corpus (pilote le prompt et les layers).
-        model_config: configuration du modèle sélectionné (provider + model_id).
-        page_id: identifiant unique de la page (ex. "beatus-lat8878-0013r").
-        manuscript_id: identifiant du manuscrit.
-        corpus_slug: identifiant du corpus (ex. "beatus-lat8878").
-        folio_label: label du folio (ex. "0013r").
-        sequence: numéro de séquence dans le manuscrit.
-        image_info: métadonnées de l'image normalisée (dimensions, chemins).
-        base_data_dir: racine du dossier data.
-        project_root: racine du projet (pour résoudre les chemins des prompts).
-
-    Returns:
-        PageMaster validé (ai_raw.json et master.json écrits sur disque).
-
-    Raises:
-        ParseError: si la réponse IA n'est pas un JSON valide.
-        FileNotFoundError: si le template de prompt est introuvable.
-        RuntimeError: si le provider n'est pas configuré (variable d'env absente).
+    Si les dimensions originales (canvas) diffèrent du dérivé, les bbox sont
+    mises à l'échelle de l'espace dérivé vers l'espace canvas original.
     """
     # ── Chemins de sortie ───────────────────────────────────────────────────
     page_dir = base_data_dir / "corpora" / corpus_slug / "pages" / folio_label
@@ -85,13 +93,18 @@ def run_primary_analysis(
         extra={"template": prompt_rel_path, "corpus": corpus_slug, "folio": folio_label},
     )
 
-    # ── 2. Chargement de l'image dérivée ────────────────────────────────────
-    if not derivative_image_path.exists():
-        raise FileNotFoundError(f"Image dérivée introuvable : {derivative_image_path}")
-    try:
-        jpeg_bytes = derivative_image_path.read_bytes()
-    except OSError as exc:
-        raise RuntimeError(f"Erreur lecture image {derivative_image_path} : {exc}") from exc
+    # ── 2. Obtention des bytes image ────────────────────────────────────────
+    if derivative_image_bytes is not None:
+        jpeg_bytes = derivative_image_bytes
+    elif derivative_image_path is not None:
+        if not derivative_image_path.exists():
+            raise FileNotFoundError(f"Image dérivée introuvable : {derivative_image_path}")
+        try:
+            jpeg_bytes = derivative_image_path.read_bytes()
+        except OSError as exc:
+            raise RuntimeError(f"Erreur lecture image {derivative_image_path} : {exc}") from exc
+    else:
+        raise ValueError("Il faut fournir derivative_image_bytes ou derivative_image_path")
 
     # ── 3. Appel IA via le provider sélectionné ─────────────────────────────
     provider = get_provider(model_config.provider)
@@ -116,21 +129,45 @@ def run_primary_analysis(
     # ── 5. Parsing + validation (ParseError si JSON invalide) ───────────────
     layout, ocr = parse_ai_response(raw_text)
 
+    # ── 5b. Scaling bbox si les dimensions originales diffèrent du dérivé ──
+    is_iiif_source = isinstance(image_info, ImageSourceInfo)
+    original_w = image_info.original_width
+    original_h = image_info.original_height
+    deriv_w = derivative_width or (getattr(image_info, "derivative_width", None)) or original_w
+    deriv_h = derivative_height or (getattr(image_info, "derivative_height", None)) or original_h
+
+    if original_w > 0 and deriv_w > 0 and (original_w != deriv_w or original_h != deriv_h):
+        scale_x = original_w / deriv_w
+        scale_y = original_h / deriv_h
+        layout = _scale_bbox_coordinates(layout, scale_x, scale_y)
+
     # ── 6. Construction du PageMaster ───────────────────────────────────────
     processed_at = datetime.now(tz=timezone.utc)
+
+    if is_iiif_source:
+        image_block = ImageInfo(
+            master=image_info.original_url,
+            iiif_service_url=image_info.iiif_service_url,
+            manifest_url=image_info.manifest_url,
+            width=original_w,
+            height=original_h,
+        )
+    else:
+        image_block = ImageInfo(
+            master=image_info.original_url,
+            derivative_web=getattr(image_info, "derivative_path", None),
+            thumbnail=getattr(image_info, "thumbnail_path", None),
+            width=original_w,
+            height=original_h,
+        )
+
     page_master = PageMaster(
         page_id=page_id,
         corpus_profile=corpus_profile.profile_id,
         manuscript_id=manuscript_id,
         folio_label=folio_label,
         sequence=sequence,
-        image=ImageInfo(
-            master=image_info.original_url,
-            derivative_web=image_info.derivative_path,
-            thumbnail=image_info.thumbnail_path,
-            width=image_info.derivative_width,
-            height=image_info.derivative_height,
-        ),
+        image=image_block,
         layout=layout,
         ocr=ocr,
         processing=ProcessingInfo(
@@ -154,6 +191,7 @@ def run_primary_analysis(
             "corpus": corpus_slug,
             "folio": folio_label,
             "regions": len(layout.get("regions", [])),
+            "iiif_native": is_iiif_source,
         },
     )
     return page_master

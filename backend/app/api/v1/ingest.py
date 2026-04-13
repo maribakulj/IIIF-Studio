@@ -144,6 +144,10 @@ async def _create_page(
     folio_label: str,
     sequence: int,
     image_master_path: str | None = None,
+    iiif_service_url: str | None = None,
+    canvas_width: int | None = None,
+    canvas_height: int | None = None,
+    manifest_url: str | None = None,
 ) -> PageModel | None:
     """Crée une page si elle n'existe pas déjà.  Retourne None si l'ID est déjà pris."""
     existing = await db.get(PageModel, page_id)
@@ -157,6 +161,10 @@ async def _create_page(
         folio_label=folio_label,
         sequence=sequence,
         image_master_path=image_master_path,
+        iiif_service_url=iiif_service_url,
+        canvas_width=canvas_width,
+        canvas_height=canvas_height,
+        manifest_url=manifest_url,
         processing_status="INGESTED",
     )
     db.add(page)
@@ -212,6 +220,78 @@ def _extract_canvas_label(canvas: dict, index: int) -> str:
     elif isinstance(label, str) and label.strip():
         return label.strip()
     return f"f{index + 1:03d}r"
+
+
+# Pattern IIIF Image API : {service}/full/{size}/{rotation}/{quality}.{format}
+_IIIF_IMAGE_API_RE = re.compile(
+    r"^(https?://.+)/full/[^/]+/\d+/default\.\w+$"
+)
+
+
+def _extract_iiif_service(canvas: dict) -> tuple[str | None, int | None, int | None]:
+    """Détecte le IIIF Image Service d'un canvas et ses dimensions.
+
+    Retourne (service_url, canvas_width, canvas_height).
+    service_url est None si aucun service IIIF trouvé (image statique).
+    """
+    canvas_w = canvas.get("width")
+    canvas_h = canvas.get("height")
+
+    # ── IIIF 3.0 : body → service[] ─────────────────────────────────────
+    items = canvas.get("items") or []
+    if items:
+        ann_items = (items[0].get("items") or []) if items else []
+        if ann_items:
+            body = ann_items[0].get("body") or {}
+            if isinstance(body, dict):
+                # Chercher un service IIIF sur le body
+                services = body.get("service") or []
+                if isinstance(services, dict):
+                    services = [services]
+                for svc in services:
+                    svc_type = svc.get("type") or svc.get("@type") or ""
+                    if "ImageService" in svc_type:
+                        svc_url = (svc.get("id") or svc.get("@id") or "").rstrip("/")
+                        if svc_url:
+                            return svc_url, canvas_w, canvas_h
+
+                # Fallback : détecter le pattern Image API dans body.id
+                body_id = body.get("id") or body.get("@id") or ""
+                m = _IIIF_IMAGE_API_RE.match(body_id)
+                if m:
+                    return m.group(1), canvas_w, canvas_h
+
+    # ── IIIF 2.x : resource → service ───────────────────────────────────
+    images = canvas.get("images") or []
+    if images:
+        resource = images[0].get("resource") or {}
+        services = resource.get("service") or []
+        if isinstance(services, dict):
+            services = [services]
+        for svc in services:
+            svc_type = svc.get("@type") or svc.get("type") or ""
+            if "ImageService" in svc_type:
+                svc_url = (svc.get("@id") or svc.get("id") or "").rstrip("/")
+                if svc_url:
+                    return svc_url, canvas_w, canvas_h
+
+        # Fallback : pattern Image API dans resource @id
+        res_id = resource.get("@id") or resource.get("id") or ""
+        m = _IIIF_IMAGE_API_RE.match(res_id)
+        if m:
+            return m.group(1), canvas_w, canvas_h
+
+    return None, canvas_w, canvas_h
+
+
+def _detect_iiif_service_from_url(url: str) -> str | None:
+    """Tente de détecter une URL de service IIIF à partir d'une URL d'image directe.
+
+    Si l'URL suit le pattern IIIF Image API ({base}/full/{size}/{rot}/{qual}.{fmt}),
+    retourne la base. Sinon retourne None.
+    """
+    m = _IIIF_IMAGE_API_RE.match(url)
+    return m.group(1) if m else None
 
 
 def _extract_canvas_image_url(canvas: dict) -> str | None:
@@ -385,9 +465,14 @@ async def ingest_iiif_manifest(
         folio_label = labels[i]
         page_id = _make_page_id(corpus.slug, folio_label, seq + i, dupes)
         image_url = _extract_canvas_image_url(canvas)
+        service_url, c_width, c_height = _extract_iiif_service(canvas)
         page = await _create_page(
             db, ms.id, page_id, folio_label, seq + i,
             image_master_path=image_url,
+            iiif_service_url=service_url,
+            canvas_width=c_width,
+            canvas_height=c_height,
+            manifest_url=body.manifest_url,
         )
         if page is None:
             skipped += 1
@@ -406,7 +491,13 @@ async def ingest_iiif_manifest(
 
     logger.info(
         "Manifest IIIF ingéré",
-        extra={"corpus_id": corpus_id, "url": body.manifest_url, "created": len(created), "skipped": skipped},
+        extra={
+            "corpus_id": corpus_id,
+            "url": body.manifest_url,
+            "created": len(created),
+            "skipped": skipped,
+            "iiif_service_detected": sum(1 for p in created if p.iiif_service_url),
+        },
     )
     return IngestResponse(
         corpus_id=corpus_id,
@@ -446,9 +537,12 @@ async def ingest_iiif_images(
     skipped = 0
     for i, (url, folio_label) in enumerate(zip(body.urls, sanitized_labels)):
         page_id = _make_page_id(corpus.slug, folio_label, seq + i, dupes)
+        # Tenter de détecter un service IIIF à partir du pattern URL
+        service_url = _detect_iiif_service_from_url(url)
         page = await _create_page(
             db, ms.id, page_id, folio_label, seq + i,
             image_master_path=url,
+            iiif_service_url=service_url,
         )
         if page is None:
             skipped += 1

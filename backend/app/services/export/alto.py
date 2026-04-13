@@ -160,7 +160,7 @@ def generate_alto(master: PageMaster) -> str:
     etree.SubElement(desc, _a("MeasurementUnit")).text = "pixel"
 
     src_info = etree.SubElement(desc, _a("sourceImageInformation"))
-    file_name = master.image.master or master.image.derivative_web or master.page_id
+    file_name = master.image.iiif_service_url or master.image.master or master.image.derivative_web or master.page_id
     etree.SubElement(src_info, _a("fileName")).text = str(file_name)
 
     if master.processing:

@@ -143,3 +143,55 @@ def fetch_and_normalize(
     """
     source_bytes = fetch_iiif_image(url)
     return create_derivatives(source_bytes, url, corpus_slug, folio_label, base_data_dir)
+
+
+# ── Mode IIIF natif : images en mémoire, jamais sur disque ───────────────────
+
+def fetch_ai_derivative_bytes(
+    iiif_service_url: str | None,
+    fallback_url: str | None,
+) -> tuple[bytes, int, int]:
+    """Retourne (jpeg_bytes, width, height) pour l'IA — jamais sauvé sur disque.
+
+    - Si iiif_service_url est fourni : utilise l'IIIF Image API pour demander
+      au serveur un dérivé 1500px directement redimensionné côté serveur.
+    - Sinon (fallback_url) : télécharge l'image complète et redimensionne
+      en mémoire.
+
+    Returns:
+        Tuple (jpeg_bytes, derivative_width, derivative_height).
+
+    Raises:
+        ValueError: si aucune source n'est fournie.
+        httpx.HTTPStatusError: si le serveur retourne une erreur.
+    """
+    from app.services.ingest.iiif_fetcher import fetch_iiif_derivative, fetch_iiif_image
+
+    if iiif_service_url:
+        raw_bytes = fetch_iiif_derivative(iiif_service_url, max_px=_MAX_DERIVATIVE_PX)
+    elif fallback_url:
+        raw_bytes = fetch_iiif_image(fallback_url)
+    else:
+        raise ValueError("Aucune source image fournie (ni iiif_service_url ni fallback_url)")
+
+    # Ouvrir en mémoire pour obtenir les dimensions (et redimensionner si fallback)
+    image = Image.open(io.BytesIO(raw_bytes))
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    if not iiif_service_url:
+        # Fallback : le serveur n'a pas redimensionné, on le fait en mémoire
+        image = _resize_to_max(image, _MAX_DERIVATIVE_PX)
+
+    w, h = image.size
+
+    # Encoder en JPEG en mémoire
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=_DERIVATIVE_QUALITY)
+    jpeg_bytes = buf.getvalue()
+
+    logger.info(
+        "Dérivé IA en mémoire",
+        extra={"iiif": bool(iiif_service_url), "size": f"{w}x{h}", "bytes": len(jpeg_bytes)},
+    )
+    return jpeg_bytes, w, h
