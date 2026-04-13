@@ -10,6 +10,9 @@ interface Props {
 const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null)
+  // Ref pour toujours accéder au callback le plus récent (évite stale closure)
+  const onViewerReadyRef = useRef(onViewerReady)
+  onViewerReadyRef.current = onViewerReady
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -38,9 +41,9 @@ const Viewer: FC<Props> = ({ imageUrl, onViewerReady }) => {
 
     viewer.open({ type: 'image', url: imageUrl })
     viewer.addOnceHandler('open', () => {
-      onViewerReady?.(viewer)
+      onViewerReadyRef.current?.(viewer)
     })
-  }, [imageUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imageUrl])
 
   return (
     <div className="relative w-full h-full bg-retro-black">

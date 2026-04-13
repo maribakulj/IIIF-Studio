@@ -48,6 +48,13 @@ export default function Editor({ pageId, onBack }: Props) {
 
   const successTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Nettoyage du timeout de succès lors du démontage du composant
+  useEffect(() => {
+    return () => {
+      if (successTimeout.current) clearTimeout(successTimeout.current)
+    }
+  }, [])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -59,7 +66,7 @@ export default function Editor({ pageId, onBack }: Props) {
       setCommentaryPublic(m.commentary?.public ?? '')
       setCommentaryScholarly(m.commentary?.scholarly ?? '')
       setEditorialStatus(m.editorial.status)
-      const ext = (m as unknown as { extensions?: { region_validations?: Record<string, string> } }).extensions
+      const ext = m.extensions as { region_validations?: Record<string, string> } | undefined
       setRegionValidations(ext?.region_validations ?? {})
     } catch (e: unknown) {
       setError((e as Error).message)

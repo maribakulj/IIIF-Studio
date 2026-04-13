@@ -47,11 +47,24 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
       .finally(() => setLoading(false))
   }, [manuscriptId, profileId])
 
+  const [masterError, setMasterError] = useState<string | null>(null)
+
   useEffect(() => {
     if (pages.length === 0) return
     setMaster(null)
+    setMasterError(null)
     setSelectedRegion(null)
-    fetchMasterJson(pages[currentIndex].id).then(setMaster).catch(() => setMaster(null))
+    fetchMasterJson(pages[currentIndex].id)
+      .then(setMaster)
+      .catch((e: unknown) => {
+        // 404 = page non analysée (normal), autres erreurs = problème réseau
+        const msg = e instanceof Error ? e.message : ''
+        if (msg.includes('404')) {
+          setMaster(null)
+        } else {
+          setMasterError(msg || 'Erreur de chargement')
+        }
+      })
   }, [pages, currentIndex])
 
   const handleViewerReady = useCallback((v: OpenSeadragon.Viewer) => {
@@ -194,10 +207,13 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
               </div>
             )}
 
-            {/* Not analyzed badge */}
+            {/* Not analyzed / error badge */}
             {!master && !loading && imageUrl && (
               <div className="absolute top-2 left-2">
-                <RetroBadge variant="warning">Non analysee</RetroBadge>
+                {masterError
+                  ? <RetroBadge variant="error">Erreur: {masterError}</RetroBadge>
+                  : <RetroBadge variant="warning">Non analysee</RetroBadge>
+                }
               </div>
             )}
           </div>

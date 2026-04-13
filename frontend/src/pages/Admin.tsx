@@ -414,6 +414,7 @@ function RunPanel({ corpusId, hasModel }: { corpusId: string; hasModel: boolean 
   }
 
   const handleRetryFailed = async () => {
+    if (polling || launching) return
     const failedIds = Object.values(jobs).filter((j) => j.status === 'failed').map((j) => j.id)
     if (failedIds.length === 0) return
     await Promise.allSettled(failedIds.map((id) => retryJob(id)))

@@ -29,6 +29,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
   const [manuscripts, setManuscripts] = useState<Record<string, Manuscript[]>>({})
   const [expanding, setExpanding] = useState<string | null>(null)
   const [selectedCorpus, setSelectedCorpus] = useState<Corpus | null>(null)
+  const [expandError, setExpandError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCorpora()
@@ -47,12 +48,13 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
     }
 
     setExpanding(corpus.id)
+    setExpandError(null)
     try {
       const ms = await fetchManuscripts(corpus.id)
       setManuscripts((prev) => ({ ...prev, [corpus.id]: ms }))
       if (ms.length === 1) onOpenManuscript(ms[0].id, corpus.profile_id)
-    } catch {
-      // silent
+    } catch (e: unknown) {
+      setExpandError(e instanceof Error ? e.message : 'Erreur de chargement')
     } finally {
       setExpanding(null)
     }
@@ -147,6 +149,11 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
                     {expanding === corpus.id && (
                       <div className="px-3 py-1 text-retro-xs text-retro-darkgray bg-retro-light">
                         Chargement...
+                      </div>
+                    )}
+                    {expandError && selectedCorpus?.id === corpus.id && !expanding && (
+                      <div className="px-3 py-1 text-retro-xs text-retro-black bg-retro-light">
+                        Erreur: {expandError}
                       </div>
                     )}
                   </div>
