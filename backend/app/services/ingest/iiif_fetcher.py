@@ -9,7 +9,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_TIMEOUT = 60.0  # secondes — les images IIIF haute résolution peuvent être lourdes
+_DEFAULT_TIMEOUT = 30.0  # secondes (connect 10s + read 30s)
 
 _HEADERS = {
     "User-Agent": (
@@ -36,7 +36,12 @@ def fetch_iiif_image(url: str, timeout: float = _DEFAULT_TIMEOUT) -> bytes:
         httpx.RequestError: pour toute autre erreur réseau.
     """
     logger.info("Fetching IIIF image", extra={"url": url})
-    response = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=timeout)
+    response = httpx.get(
+        url,
+        headers=_HEADERS,
+        follow_redirects=True,
+        timeout=httpx.Timeout(timeout, connect=10.0),
+    )
     response.raise_for_status()
     logger.info(
         "IIIF image fetched",

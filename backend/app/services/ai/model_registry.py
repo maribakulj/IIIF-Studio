@@ -23,27 +23,24 @@ _PROVIDER_DISPLAY_NAMES: dict[ProviderType, str] = {
 }
 
 
-_cached_providers: list[AIProvider] | None = None
-
-
 def _build_providers() -> list[AIProvider]:
-    """Construit la liste des providers — imports différés, résultat mis en cache."""
-    global _cached_providers
-    if _cached_providers is not None:
-        return _cached_providers
+    """Construit la liste des providers — imports différés.
 
+    Pas de cache global : la construction est triviale (4 objets légers)
+    et l'absence de cache permet de détecter immédiatement les changements
+    de variables d'environnement sans redémarrage.
+    """
     from app.services.ai.provider_google_ai import GoogleAIProvider
     from app.services.ai.provider_mistral import MistralProvider
     from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
     from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
 
-    _cached_providers = [
+    return [
         GoogleAIProvider(),
         VertexAPIKeyProvider(),
         VertexServiceAccountProvider(),
         MistralProvider(),
     ]
-    return _cached_providers
 
 
 def get_available_providers() -> list[dict]:
@@ -59,25 +56,34 @@ def get_available_providers() -> list[dict]:
     """
     result: list[dict] = []
     for provider in _build_providers():
-        available = provider.is_configured()
+        configured = provider.is_configured()
+        available = False
         model_count = 0
-        if available:
+        status = "not_configured"
+        error_detail: str | None = None
+
+        if configured:
             try:
                 models = provider.list_models()
                 model_count = len(models)
+                available = True
+                status = "available"
             except Exception as exc:
                 logger.warning(
-                    "Provider %s inaccessible : %s",
+                    "Provider %s configuré mais inaccessible : %s",
                     provider.provider_type.value,
                     exc,
                 )
-                available = False
+                status = "error"
+                error_detail = str(exc)
 
         result.append({
             "provider_type": provider.provider_type.value,
             "display_name": _PROVIDER_DISPLAY_NAMES.get(provider.provider_type, provider.provider_type.value),
             "available": available,
             "model_count": model_count,
+            "status": status,
+            "error_detail": error_detail,
         })
     return result
 

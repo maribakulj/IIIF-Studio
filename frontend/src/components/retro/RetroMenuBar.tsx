@@ -17,7 +17,8 @@ interface Props {
 
 export default function RetroMenuBar({ items = [], right, className = '' }: Props) {
   return (
-    <div
+    <nav
+      aria-label="Menu principal"
       className={`
         flex items-center
         bg-retro-gray
@@ -28,10 +29,10 @@ export default function RetroMenuBar({ items = [], right, className = '' }: Prop
         ${className}
       `}
     >
-      {items.map((item, i) => (
+      {items.map((item) => (
         <button
           type="button"
-          key={i}
+          key={item.label}
           onClick={item.onClick}
           disabled={item.disabled}
           className={`
@@ -51,6 +52,6 @@ export default function RetroMenuBar({ items = [], right, className = '' }: Prop
           {right}
         </div>
       )}
-    </div>
+    </nav>
   )
 }

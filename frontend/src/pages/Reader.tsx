@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type OpenSeadragon from 'openseadragon'
 import {
   fetchPages,
@@ -17,14 +18,11 @@ import TranslationPanel from '../components/TranslationPanel.tsx'
 import CommentaryPanel from '../components/CommentaryPanel.tsx'
 import { RetroMenuBar, RetroWindow, RetroButton, RetroBadge } from '../components/retro'
 
-interface Props {
-  manuscriptId: string
-  profileId: string
-  onBack: () => void
-  onEdit?: (pageId: string) => void
-}
-
-export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Props) {
+export default function Reader() {
+  const { manuscriptId = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const profileId = searchParams.get('profile') ?? ''
+  const navigate = useNavigate()
   const [pages, setPages] = useState<Page[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [master, setMaster] = useState<PageMaster | null>(null)
@@ -47,11 +45,24 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
       .finally(() => setLoading(false))
   }, [manuscriptId, profileId])
 
+  const [masterError, setMasterError] = useState<string | null>(null)
+
   useEffect(() => {
     if (pages.length === 0) return
     setMaster(null)
+    setMasterError(null)
     setSelectedRegion(null)
-    fetchMasterJson(pages[currentIndex].id).then(setMaster).catch(() => setMaster(null))
+    fetchMasterJson(pages[currentIndex].id)
+      .then(setMaster)
+      .catch((e: unknown) => {
+        // 404 = page non analysée (normal), autres erreurs = problème réseau
+        const msg = e instanceof Error ? e.message : ''
+        if (msg.includes('404')) {
+          setMaster(null)
+        } else {
+          setMasterError(msg || 'Erreur de chargement')
+        }
+      })
   }, [pages, currentIndex])
 
   const handleViewerReady = useCallback((v: OpenSeadragon.Viewer) => {
@@ -95,7 +106,7 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
           <div className="p-4 text-retro-sm">
             Aucune page dans ce manuscrit.
             <div className="mt-2">
-              <RetroButton onClick={onBack}>Retour</RetroButton>
+              <RetroButton onClick={() => navigate('/')}>Retour</RetroButton>
             </div>
           </div>
         </RetroWindow>
@@ -112,7 +123,7 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
       {/* ── Menu bar ───────────────────────────────────────────────── */}
       <RetroMenuBar
         items={[
-          { label: 'IIIF Studio', onClick: onBack },
+          { label: 'IIIF Studio', onClick: () => navigate('/') },
           { label: profile?.label ?? profileId },
         ]}
         right={
@@ -134,11 +145,9 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
             >
               Next
             </RetroButton>
-            {onEdit && (
-              <RetroButton size="sm" onClick={() => onEdit(currentPage.id)}>
-                Editer
-              </RetroButton>
-            )}
+            <RetroButton size="sm" onClick={() => navigate(`/editor/${currentPage.id}`)}>
+              Editer
+            </RetroButton>
           </div>
         }
       />
@@ -194,10 +203,13 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
               </div>
             )}
 
-            {/* Not analyzed badge */}
+            {/* Not analyzed / error badge */}
             {!master && !loading && imageUrl && (
               <div className="absolute top-2 left-2">
-                <RetroBadge variant="warning">Non analysee</RetroBadge>
+                {masterError
+                  ? <RetroBadge variant="error">Erreur: {masterError}</RetroBadge>
+                  : <RetroBadge variant="warning">Non analysee</RetroBadge>
+                }
               </div>
             )}
           </div>
@@ -230,7 +242,8 @@ export default function Reader({ manuscriptId, profileId, onBack, onEdit }: Prop
                 <TranslationPanel
                   translation={master.translation}
                   editorial={master.editorial}
-                  visible={visibleLayers.has('translation_fr')}
+                  visible={visibleLayers.has('translation_fr') || visibleLayers.has('translation_en')}
+                  activeLayers={profile?.active_layers}
                 />
                 <CommentaryPanel
                   commentary={master.commentary}

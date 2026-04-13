@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 interface Props {
   /** Label text next to the checkbox */
   label: string
@@ -18,9 +20,11 @@ export default function RetroCheckbox({
   disabled = false,
   className = '',
 }: Props) {
+  const id = useId()
+
   return (
     <label
-      onClick={() => { if (!disabled) onChange(!checked) }}
+      htmlFor={id}
       className={`
         inline-flex items-center gap-[6px]
         text-retro-sm font-retro
@@ -29,7 +33,16 @@ export default function RetroCheckbox({
         ${className}
       `}
     >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        className="sr-only"
+      />
       <span
+        aria-hidden="true"
         className={`
           inline-flex items-center justify-center
           w-[13px] h-[13px]

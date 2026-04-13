@@ -28,10 +28,10 @@ class JobModel(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     corpus_id: Mapped[str] = mapped_column(
-        String, ForeignKey("corpora.id"), nullable=False, index=True
+        String, ForeignKey("corpora.id", ondelete="CASCADE"), nullable=False, index=True
     )
     page_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("pages.id"), nullable=True, index=True
+        String, ForeignKey("pages.id", ondelete="SET NULL"), nullable=True, index=True
     )
     # pending / running / done / failed
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")

@@ -74,6 +74,16 @@ async def create_corpus(
     body: CorpusCreate, db: AsyncSession = Depends(get_db)
 ) -> CorpusModel:
     """Crée un nouveau corpus. Le slug doit être unique."""
+    # Vérifier que le profil existe dans profiles_dir
+    from app.config import settings as _settings
+
+    profile_path = _settings.profiles_dir / f"{body.profile_id}.json"
+    if not profile_path.is_file():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Profil «{body.profile_id}» introuvable dans {_settings.profiles_dir}",
+        )
+
     # Vérifier unicité du slug
     existing = await db.execute(
         select(CorpusModel).where(CorpusModel.slug == body.slug)

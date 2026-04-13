@@ -30,6 +30,7 @@ export interface IngestResponse {
   corpus_id: string
   manuscript_id: string
   pages_created: number
+  pages_skipped: number
   page_ids: string[]
 }
 
@@ -105,6 +106,8 @@ export interface Region {
 
 export interface OCRResult {
   diplomatic_text: string
+  blocks: Record<string, unknown>[]
+  lines: Record<string, unknown>[]
   language: string
   confidence: number
   uncertain_segments: string[]
@@ -143,11 +146,12 @@ export interface EditorialInfo {
 }
 
 export interface ImageInfo {
-  master?: string
-  derivative_web?: string
-  iiif_base?: string
-  width?: number
-  height?: number
+  master: string
+  derivative_web?: string | null
+  thumbnail?: string | null
+  iiif_base?: string | null
+  width: number
+  height: number
 }
 
 export interface PageMaster {
@@ -163,6 +167,8 @@ export interface PageMaster {
   translation: Translation | null
   summary: { short: string; detailed: string } | null
   commentary: Commentary | null
+  extensions: Record<string, unknown>
+  processing: Record<string, unknown> | null
   editorial: EditorialInfo
 }
 
@@ -245,7 +251,7 @@ export const fetchPages = (manuscriptId: string): Promise<Page[]> =>
 export const fetchMasterJson = (pageId: string): Promise<PageMaster> =>
   get(`/api/v1/pages/${pageId}/master-json`)
 
-export const fetchManifest = (manuscriptId: string): Promise<unknown> =>
+export const fetchManifest = (manuscriptId: string): Promise<Record<string, unknown>> =>
   get(`/api/v1/manuscripts/${manuscriptId}/iiif-manifest`)
 
 export const fetchProfile = (profileId: string): Promise<CorpusProfile> =>
@@ -268,7 +274,7 @@ export const selectModel = (
   modelId: string,
   displayName: string,
   providerType: string,
-): Promise<unknown> =>
+): Promise<CorpusModelConfig> =>
   put(`/api/v1/corpora/${corpusId}/model`, {
     model_id: modelId,
     display_name: displayName,

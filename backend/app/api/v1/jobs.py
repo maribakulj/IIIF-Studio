@@ -115,7 +115,7 @@ async def run_page(
     page_id: str,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-) -> JobModel:
+) -> JobModel:  # FastAPI sérialise via response_model=JobResponse
     """Lance le pipeline sur une seule page.
 
     Crée un JobModel (status=pending) et délègue l'exécution à

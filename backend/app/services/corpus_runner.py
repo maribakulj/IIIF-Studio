@@ -30,15 +30,21 @@ async def execute_corpus_job(corpus_id: str) -> dict:
     Returns:
         {"total": int, "done": int, "failed": int}
     """
-    # Collecte des IDs de jobs PENDING (snapshot en début de run)
+    # Collecte et verrouillage des jobs PENDING : on les passe immédiatement
+    # en "claimed" pour éviter qu'un second appel concurrent ne les reprenne
+    # (TOCTOU). Chaque job sera ensuite passé en "running" par job_runner.
     async with async_session_factory() as db:
         result = await db.execute(
-            select(JobModel.id).where(
+            select(JobModel).where(
                 JobModel.corpus_id == corpus_id,
                 JobModel.status == "pending",
             )
         )
-        job_ids: list[str] = list(result.scalars().all())
+        pending_jobs = list(result.scalars().all())
+        job_ids: list[str] = [j.id for j in pending_jobs]
+        for j in pending_jobs:
+            j.status = "claimed"
+        await db.commit()
 
     if not job_ids:
         logger.info(

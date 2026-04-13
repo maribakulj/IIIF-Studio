@@ -21,6 +21,11 @@ const RegionOverlay: FC<Props> = ({ viewer, regions, onRegionClick }) => {
   useEffect(() => {
     if (!viewer) return
 
+    // AbortController pour nettoyer proprement tous les event listeners
+    // lors du démontage ou du re-rendu (évite les fuites mémoire).
+    const controller = new AbortController()
+    const { signal } = controller
+
     const addOverlays = () => {
       viewer.clearOverlays()
       const item = viewer.world.getItemAt(0)
@@ -38,14 +43,14 @@ const RegionOverlay: FC<Props> = ({ viewer, regions, onRegionClick }) => {
 
         el.addEventListener('mouseenter', () => {
           el.style.backgroundColor = `${color}33`
-        })
+        }, { signal })
         el.addEventListener('mouseleave', () => {
           el.style.backgroundColor = ''
-        })
+        }, { signal })
         el.addEventListener('click', (e: MouseEvent) => {
           e.stopPropagation()
           onRegionClick(region)
-        })
+        }, { signal })
 
         const rect = item.imageToViewportRectangle(x, y, w, h)
         viewer.addOverlay(el, rect)
@@ -59,7 +64,8 @@ const RegionOverlay: FC<Props> = ({ viewer, regions, onRegionClick }) => {
     }
 
     return () => {
-      // Nettoyage : retire les overlays au prochain rendu
+      // Supprime tous les event listeners d'un coup, puis les overlays
+      controller.abort()
       try {
         viewer.clearOverlays()
       } catch {

@@ -9,17 +9,19 @@ services:
   api:
     build:
       context: ..            # racine du dépôt = contexte de build
-      dockerfile: infra/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "7860:7860"
     volumes:
       - ../data:/app/data    # artefacts montés en volume, hors image
     environment:
-      # Provider IA : google_ai_studio | google_vertex | google_ai_api
-      - AI_PROVIDER=${AI_PROVIDER:-google_ai_studio}
-      # Clés selon le provider choisi — à définir dans .env
+      # Clés IA — à définir dans .env (R06 : jamais en clair ici)
+      # Le backend détecte automatiquement quels providers sont disponibles
+      # selon les clés présentes. Pas de AI_PROVIDER global.
       - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY:-}
-      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY:-}
-      - GOOGLE_VERTEX_PROJECT=${GOOGLE_VERTEX_PROJECT:-}
-      - GOOGLE_VERTEX_LOCATION=${GOOGLE_VERTEX_LOCATION:-us-central1}
+      - VERTEX_API_KEY=${VERTEX_API_KEY:-}
+      - VERTEX_SERVICE_ACCOUNT_JSON=${VERTEX_SERVICE_ACCOUNT_JSON:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      # CORS — par défaut toutes origines (dev). Restreindre en production.
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
     restart: unless-stopped

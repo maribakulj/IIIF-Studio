@@ -21,7 +21,7 @@ class ModelConfigDB(Base):
     __tablename__ = "model_configs"
 
     corpus_id: Mapped[str] = mapped_column(
-        String, ForeignKey("corpora.id"), primary_key=True
+        String, ForeignKey("corpora.id", ondelete="CASCADE"), primary_key=True
     )
     provider_type: Mapped[str] = mapped_column(String, nullable=False)
     selected_model_id: Mapped[str] = mapped_column(String, nullable=False)

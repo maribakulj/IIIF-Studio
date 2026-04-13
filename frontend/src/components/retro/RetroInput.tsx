@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes } from 'react'
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   /** Optional label rendered above the input */
@@ -6,14 +6,18 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export default function RetroInput({ label, className = '', ...rest }: Props) {
+  const generatedId = useId()
+  const inputId = rest.id ?? generatedId
+
   return (
     <div className="flex flex-col gap-[2px]">
       {label && (
-        <label className="text-retro-xs font-retro font-medium text-retro-black">
+        <label htmlFor={inputId} className="text-retro-xs font-retro font-medium text-retro-black">
           {label}
         </label>
       )}
       <input
+        id={inputId}
         className={`
           px-2 py-[3px]
           text-retro-sm font-retro

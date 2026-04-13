@@ -528,10 +528,11 @@ async def test_corpus_runner_calls_execute_per_job(monkeypatch):
         async def execute(self, stmt):
             _call_count[0] += 1
             if _call_count[0] == 1:
-                # Premier appel : retourne les IDs de jobs pending
-                rows = ["job-alpha", "job-beta"]
+                # Premier appel : retourne les objets JobModel pending
+                # (corpus_runner itère maintenant les objets, pas les IDs)
+                rows = [_FakeJob("job-alpha", "pending"), _FakeJob("job-beta", "pending")]
             else:
-                # Second appel : retourne les objets JobModel avec statut
+                # Second appel : retourne les objets JobModel avec statut final
                 rows = [_FakeJob("job-alpha", "done"), _FakeJob("job-beta", "done")]
 
             class _Result:
@@ -541,6 +542,9 @@ async def test_corpus_runner_calls_execute_per_job(monkeypatch):
                             return rows
                     return _Scalars()
             return _Result()
+
+        async def commit(self):
+            pass
 
     def _mock_factory():
         return _FakeSession()
