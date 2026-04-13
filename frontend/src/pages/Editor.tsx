@@ -67,7 +67,12 @@ export default function Editor() {
       const ext = m.extensions as { region_validations?: Record<string, string> } | undefined
       setRegionValidations(ext?.region_validations ?? {})
     } catch (e: unknown) {
-      setError((e as Error).message)
+      const msg = (e as Error).message ?? ''
+      if (msg.includes('404')) {
+        setError('Cette page n\'a pas encore ete analysee par l\'IA. Lancez le pipeline depuis Administration.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }
