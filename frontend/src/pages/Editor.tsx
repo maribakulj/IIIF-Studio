@@ -176,7 +176,7 @@ export default function Editor({ pageId, onBack }: Props) {
       />
 
       {/* ── Main layout 50/50 ──────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden p-1 gap-1">
+      <div className="flex flex-1 min-h-0 overflow-hidden p-1 gap-1">
 
         {/* ── Viewer window (left) ───────────────────────────────── */}
         <RetroWindow

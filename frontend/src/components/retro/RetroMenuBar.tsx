@@ -30,6 +30,7 @@ export default function RetroMenuBar({ items = [], right, className = '' }: Prop
     >
       {items.map((item, i) => (
         <button
+          type="button"
           key={i}
           onClick={item.onClick}
           disabled={item.disabled}

@@ -14,6 +14,7 @@ export default function RetroButton({
   pressed = false,
   className = '',
   disabled,
+  type = 'button',
   ...rest
 }: Props) {
   const padding = size === 'sm' ? 'px-2 py-[1px]' : 'px-3 py-[3px]'
@@ -21,6 +22,7 @@ export default function RetroButton({
 
   return (
     <button
+      type={type}
       className={`
         ${padding} ${fontSize}
         font-retro font-medium
