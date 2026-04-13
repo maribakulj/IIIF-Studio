@@ -135,7 +135,18 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
                 image_source, corpus.slug, page.folio_label, data_dir
             )
         elif image_source:
-            source_bytes = Path(image_source).read_bytes()
+            # Validation anti path-traversal : le chemin résolu doit être
+            # sous data_dir. Empêche la lecture de fichiers arbitraires
+            # si image_master_path contient des séquences ../ ou un
+            # chemin absolu hors du répertoire de données.
+            source_path = Path(image_source).resolve()
+            data_dir_resolved = data_dir.resolve()
+            if not str(source_path).startswith(str(data_dir_resolved) + "/") and source_path != data_dir_resolved:
+                raise ValueError(
+                    f"Chemin image hors du répertoire de données interdit : "
+                    f"{image_source!r} (résolu : {source_path})"
+                )
+            source_bytes = source_path.read_bytes()
             image_info = create_derivatives(
                 source_bytes, image_source, corpus.slug, page.folio_label, data_dir
             )

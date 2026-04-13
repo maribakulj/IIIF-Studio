@@ -65,10 +65,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS (dev : toutes les origines autorisées, sans credentials) ──────────────
+# ── CORS (configurable via CORS_ORIGINS ; défaut : ["*"] pour le dev) ─────────
+from app.config import settings as _settings
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_settings.cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

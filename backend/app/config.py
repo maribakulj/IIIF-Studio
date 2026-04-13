@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     # ── Serveur ──────────────────────────────────────────────────────────────
     base_url: str = "http://localhost:8000"
     data_dir: Path = Path("data")
+    cors_origins: list[str] = ["*"]
 
     # ── Chemins des ressources statiques ─────────────────────────────────────
     # Calculés depuis la racine du dépôt ; surchargeables via variables d'env.
