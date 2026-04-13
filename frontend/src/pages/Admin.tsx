@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   fetchCorpora,
   fetchManuscripts,
@@ -35,10 +36,6 @@ import {
 } from '../components/retro'
 
 type IngestSubTab = 'urls' | 'manifest' | 'files'
-
-interface Props {
-  onHome: () => void
-}
 
 // ── Feedback helpers ───────────────────────────────────────────────────────
 
@@ -542,7 +539,9 @@ function CorpusDetail({ corpus, onDeleted }: { corpus: Corpus; onDeleted: () => 
 
 // ── Admin (main component) ─────────────────────────────────────────────────
 
-export default function Admin({ onHome }: Props) {
+export default function Admin() {
+  const navigate = useNavigate()
+  const onHome = () => navigate('/')
   const [corpora, setCorpora] = useState<Corpus[]>([])
   const [selectedCorpusId, setSelectedCorpusId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   applyCorrections,
   getHistory,
@@ -16,11 +17,6 @@ import {
   RetroBadge,
 } from '../components/retro'
 
-interface Props {
-  pageId: string
-  onBack: () => void
-}
-
 type Panel = 'transcription' | 'commentary' | 'regions' | 'history'
 
 const PANEL_LABELS: Record<Panel, string> = {
@@ -30,7 +26,9 @@ const PANEL_LABELS: Record<Panel, string> = {
   history: 'Historique',
 }
 
-export default function Editor({ pageId, onBack }: Props) {
+export default function Editor() {
+  const { pageId = '' } = useParams()
+  const navigate = useNavigate()
   const [master, setMaster] = useState<PageMaster | null>(null)
   const [history, setHistory] = useState<VersionInfo[]>([])
   const [activePanel, setActivePanel] = useState<Panel>('transcription')
@@ -144,7 +142,7 @@ export default function Editor({ pageId, onBack }: Props) {
         <RetroWindow title="Erreur" className="w-80">
           <div className="p-4 text-retro-sm">
             {error}
-            <div className="mt-2"><RetroButton onClick={onBack}>Retour</RetroButton></div>
+            <div className="mt-2"><RetroButton onClick={() => navigate(-1)}>Retour</RetroButton></div>
           </div>
         </RetroWindow>
       </div>
@@ -159,7 +157,7 @@ export default function Editor({ pageId, onBack }: Props) {
       {/* ── Menu bar ───────────────────────────────────────────────── */}
       <RetroMenuBar
         items={[
-          { label: 'IIIF Studio', onClick: onBack },
+          { label: 'IIIF Studio', onClick: () => navigate('/') },
           { label: `Editeur — ${master?.folio_label ?? pageId}` },
         ]}
         right={

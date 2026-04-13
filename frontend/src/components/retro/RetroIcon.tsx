@@ -22,6 +22,7 @@ export default function RetroIcon({
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
       className={`
         flex flex-col items-center gap-1
         p-2 w-[80px]

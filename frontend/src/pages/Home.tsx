@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/SearchBar.tsx'
 import { RetroMenuBar, RetroWindow, RetroIcon } from '../components/retro'
 import {
@@ -16,13 +17,8 @@ const PROFILE_GLYPHS: Record<string, string> = {
   'modern-handwritten':   '\u{270D}',
 }
 
-interface Props {
-  onOpenManuscript: (manuscriptId: string, profileId: string) => void
-  onOpenPage?: (pageId: string) => void
-  onAdmin: () => void
-}
-
-export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
+export default function Home() {
+  const navigate = useNavigate()
   const [corpora, setCorpora] = useState<Corpus[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +39,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
 
     const cached = manuscripts[corpus.id]
     if (cached) {
-      if (cached.length === 1) onOpenManuscript(cached[0].id, corpus.profile_id)
+      if (cached.length === 1) navigate(`/reader/${cached[0].id}?profile=${corpus.profile_id}`)
       return
     }
 
@@ -52,7 +48,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
     try {
       const ms = await fetchManuscripts(corpus.id)
       setManuscripts((prev) => ({ ...prev, [corpus.id]: ms }))
-      if (ms.length === 1) onOpenManuscript(ms[0].id, corpus.profile_id)
+      if (ms.length === 1) navigate(`/reader/${ms[0].id}?profile=${corpus.profile_id}`)
     } catch (e: unknown) {
       setExpandError(e instanceof Error ? e.message : 'Erreur de chargement')
     } finally {
@@ -95,10 +91,10 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
       <RetroMenuBar
         items={[
           { label: 'IIIF Studio' },
-          { label: 'Administration', onClick: onAdmin },
+          { label: 'Administration', onClick: () => navigate('/admin') },
         ]}
         right={
-          <SearchBar onSelectResult={onOpenPage ? (r) => onOpenPage(r.page_id) : undefined} />
+          <SearchBar onSelectResult={(r) => navigate(`/editor/${r.page_id}`)} />
         }
       />
 
@@ -176,7 +172,7 @@ export default function Home({ onOpenManuscript, onOpenPage, onAdmin }: Props) {
                   <button
                     type="button"
                     key={ms.id}
-                    onClick={() => onOpenManuscript(ms.id, selectedCorpus.profile_id)}
+                    onClick={() => navigate(`/reader/${ms.id}?profile=${selectedCorpus.profile_id}`)}
                     className="
                       w-full text-left px-3 py-[6px]
                       text-retro-sm font-retro
