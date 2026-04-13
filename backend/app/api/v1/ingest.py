@@ -20,6 +20,7 @@ import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 3. local
@@ -389,7 +390,14 @@ async def ingest_iiif_manifest(
             created.append(page)
 
     ms.total_pages = (ms.total_pages or 0) + len(created)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Conflit : certaines pages existent déjà (ingestion concurrente probable)",
+        )
 
     logger.info(
         "Manifest IIIF ingéré",
@@ -443,7 +451,14 @@ async def ingest_iiif_images(
             created.append(page)
 
     ms.total_pages = (ms.total_pages or 0) + len(created)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Conflit : certaines pages existent déjà (ingestion concurrente probable)",
+        )
 
     logger.info(
         "Images IIIF ingérées",

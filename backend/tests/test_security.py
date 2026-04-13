@@ -142,7 +142,7 @@ async def test_ssrf_localhost(async_client):
     """Un manifest_url pointant vers localhost doit être rejeté."""
     # Créer un corpus d'abord
     create = await async_client.post("/api/v1/corpora", json={
-        "slug": "ssrf-test", "title": "SSRF", "profile_id": "test",
+        "slug": "ssrf-test", "title": "SSRF", "profile_id": "medieval-illuminated",
     })
     cid = create.json()["id"]
 
@@ -157,7 +157,7 @@ async def test_ssrf_localhost(async_client):
 async def test_ssrf_metadata_ip(async_client):
     """Un manifest_url vers 169.254.x.x (cloud metadata) doit être rejeté."""
     create = await async_client.post("/api/v1/corpora", json={
-        "slug": "ssrf-meta", "title": "SSRF", "profile_id": "test",
+        "slug": "ssrf-meta", "title": "SSRF", "profile_id": "medieval-illuminated",
     })
     cid = create.json()["id"]
 
@@ -171,7 +171,7 @@ async def test_ssrf_metadata_ip(async_client):
 async def test_ssrf_file_scheme(async_client):
     """Un manifest_url avec file:// doit être rejeté."""
     create = await async_client.post("/api/v1/corpora", json={
-        "slug": "ssrf-file", "title": "SSRF", "profile_id": "test",
+        "slug": "ssrf-file", "title": "SSRF", "profile_id": "medieval-illuminated",
     })
     cid = create.json()["id"]
 
@@ -207,7 +207,7 @@ async def test_search_query_max_length_ok(async_client):
 async def test_model_id_too_long(async_client):
     """Un model_id >256 chars doit être rejeté."""
     create = await async_client.post("/api/v1/corpora", json={
-        "slug": "model-test", "title": "T", "profile_id": "test",
+        "slug": "model-test", "title": "T", "profile_id": "medieval-illuminated",
     })
     cid = create.json()["id"]
 

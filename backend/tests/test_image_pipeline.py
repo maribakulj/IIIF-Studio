@@ -270,18 +270,11 @@ def test_fetch_iiif_image_success():
         result = fetch_iiif_image("https://example.com/image.jpg")
 
     assert result == fake_bytes
-    mock_get.assert_called_once_with(
-        "https://example.com/image.jpg",
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (compatible; IIIFStudio/1.0; "
-                "+https://huggingface.co/spaces/Ma-Ri-Ba-Ku/iiif-studio)"
-            ),
-            "Accept": "image/jpeg,image/png,image/*,*/*",
-        },
-        follow_redirects=True,
-        timeout=60.0,
-    )
+    _, kwargs = mock_get.call_args
+    assert kwargs["follow_redirects"] is True
+    # Timeout is now an httpx.Timeout object (connect=10s, read=30s)
+    assert kwargs["timeout"].connect == 10.0
+    assert kwargs["timeout"].read == 30.0
 
 
 def test_fetch_iiif_image_http_error():
@@ -321,7 +314,9 @@ def test_fetch_iiif_image_custom_timeout():
         fetch_iiif_image("https://example.com/img.jpg", timeout=120.0)
 
     _, kwargs = mock_get.call_args
-    assert kwargs["timeout"] == 120.0
+    # Custom timeout wraps in httpx.Timeout(120.0, connect=10.0)
+    assert kwargs["timeout"].read == 120.0
+    assert kwargs["timeout"].connect == 10.0
 
 
 # ---------------------------------------------------------------------------

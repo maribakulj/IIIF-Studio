@@ -27,7 +27,7 @@ from app.models.corpus import CorpusModel, ManuscriptModel, PageModel
 from app.models.database import get_db
 from app.schemas.annotation import LayerStatus
 from app.schemas.corpus_profile import LayerType
-from app.schemas.page_master import PageMaster
+from app.schemas.page_master import EditorialStatus, PageMaster
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pages", tags=["pages"])
@@ -43,7 +43,7 @@ class CorrectionsRequest(BaseModel):
     """
 
     ocr_diplomatic_text: str | None = Field(None, max_length=500_000)
-    editorial_status: str | None = Field(None, max_length=50)
+    editorial_status: EditorialStatus | None = None
     commentary_public: str | None = Field(None, max_length=100_000)
     commentary_scholarly: str | None = Field(None, max_length=100_000)
     region_validations: dict[str, str] | None = None
@@ -356,7 +356,17 @@ async def apply_corrections(
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    _write_master(page_dir, new_master)
+    try:
+        _write_master(page_dir, new_master)
+    except OSError as exc:
+        logger.error(
+            "Échec écriture master.json",
+            extra={"page_id": page_id, "error": str(exc)},
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Impossible d'écrire master.json : {exc}",
+        ) from exc
     logger.info(
         "Corrections appliquées",
         extra={"page_id": page_id, "version": new_master.editorial.version},

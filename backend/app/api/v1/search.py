@@ -117,6 +117,11 @@ async def search_pages(
             except (json.JSONDecodeError, OSError):
                 continue
 
+            # Vérification minimale de la structure attendue
+            if not isinstance(raw.get("page_id"), str):
+                logger.warning("master.json invalide ignoré : %s", master_path)
+                continue
+
             score, excerpt = _score_master(raw, query_normalized)
             if score == 0:
                 continue

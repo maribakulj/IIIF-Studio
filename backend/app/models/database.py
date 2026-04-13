@@ -11,6 +11,7 @@ Les tables sont créées au démarrage de l'application (voir main.py lifespan).
 import logging
 
 # 2. third-party
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -28,6 +29,13 @@ engine = create_async_engine(
     echo=False,
     connect_args={"check_same_thread": False},
 )
+
+# Activer les clés étrangères SQLite (désactivées par défaut).
+# Nécessaire pour que ondelete="CASCADE" / "SET NULL" fonctionne.
+@event.listens_for(engine.sync_engine, "connect")
+def _set_sqlite_pragma(dbapi_conn, _connection_record):
+    cursor = dbapi_conn.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 async_session_factory = async_sessionmaker(
     engine,

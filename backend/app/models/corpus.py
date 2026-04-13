@@ -44,7 +44,7 @@ class ManuscriptModel(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     corpus_id: Mapped[str] = mapped_column(
-        String, ForeignKey("corpora.id"), nullable=False, index=True
+        String, ForeignKey("corpora.id", ondelete="CASCADE"), nullable=False, index=True
     )
     shelfmark: Mapped[str | None] = mapped_column(String, nullable=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
@@ -69,7 +69,7 @@ class PageModel(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     manuscript_id: Mapped[str] = mapped_column(
-        String, ForeignKey("manuscripts.id"), nullable=False, index=True
+        String, ForeignKey("manuscripts.id", ondelete="CASCADE"), nullable=False, index=True
     )
     folio_label: Mapped[str] = mapped_column(String, nullable=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
