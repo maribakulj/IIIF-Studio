@@ -10,56 +10,266 @@ pinned: false
 
 # IIIF Studio
 
-Plateforme générique de génération d'éditions savantes augmentées pour documents
-patrimoniaux numérisés : manuscrits médiévaux, incunables, cartulaires, archives,
-chartes, papyri — tout type de document, toute époque, toute langue.
+A generic platform for generating AI-augmented scholarly editions from digitized heritage documents — medieval manuscripts, incunabula, cartularies, archives, charters, papyri. Any document type, any era, any language.
+
+IIIF Studio ingests images from any [IIIF](https://iiif.io/)-compliant server, analyzes them with multimodal AI (Google Gemini, Mistral), and produces structured scholarly data: diplomatic OCR, layout detection, translations, commentaries, and iconographic analysis — all exportable as ALTO XML, METS, and IIIF Presentation 3.0 manifests.
+
+**Images are never stored locally.** The platform streams them from origin servers using the IIIF Image API, storing only the AI-generated metadata (~5 KB per page instead of ~50 MB).
 
 ---
 
-## Structure du dépôt
+## Features
 
-```
-iiif-studio/
-├── backend/            # API FastAPI + pipeline Python
-│   ├── app/
-│   │   ├── api/v1/     # endpoints REST (/api/v1/...)
-│   │   ├── models/     # tables SQLAlchemy (SQLite async)
-│   │   ├── schemas/    # modèles Pydantic v2
-│   │   └── services/   # ingest / image / ai / export / search
-│   ├── tests/          # suite pytest (563 tests)
-│   └── pyproject.toml
-├── frontend/           # React + TypeScript + Vite (design rétro)
-├── profiles/           # 4 profils de corpus JSON
-├── prompts/            # templates de prompts par profil
-├── infra/              # docker-compose (dev local)
-├── Dockerfile          # image multi-stage (frontend + backend)
-└── data/               # artefacts runtime — NON versionné
-```
+- **IIIF-native architecture** — images streamed from origin servers (Gallica, BnF, Bodleian, etc.) with tiled deep zoom via OpenSeadragon
+- **Multi-provider AI** — Google AI Studio, Vertex AI, Mistral AI. Model selected per corpus, auto-detected from environment
+- **Profile-driven analysis** — 4 built-in corpus profiles (medieval illuminated, medieval textual, early modern print, modern handwritten), each with tailored prompts and active layers
+- **Structured output** — layout regions with bounding boxes, diplomatic OCR, translations (FR/EN), scholarly and public commentary, iconographic analysis, uncertainty tracking
+- **Standards-compliant export** — IIIF Presentation 3.0 manifests (with Image Service for tiled zoom), ALTO XML, METS XML, ZIP bundles
+- **Human-in-the-loop** — editorial correction interface with versioned history and rollback
+- **Full-text search** — accent-insensitive search across OCR text, translations, and iconographic tags
 
 ---
 
-## Lancer en local (Docker)
+## Architecture
+
+```
+┌──────────────────────────────┐
+│   IIIF Image Servers         │  Gallica, BnF, Bodleian, ...
+│   (origin — images stay here)│
+└──────────────┬───────────────┘
+               │ IIIF Image API
+    ┌──────────┼──────────┐
+    │          │          │
+┌───▼───┐ ┌───▼───┐ ┌───▼───┐
+│Backend│ │Viewer │ │Tiled  │
+│  (AI) │ │display│ │ zoom  │
+│ bytes │ │       │ │       │
+│in RAM │ │       │ │       │
+└───┬───┘ └───────┘ └───────┘
+    │
+┌───▼─────────────────────┐
+│ Local storage            │  JSON only (~5 KB/page)
+│ master.json + ai_raw.json│  No images on disk
+│ + SQLite metadata        │
+└──────────────────────────┘
+```
+
+### Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.11+, FastAPI, Uvicorn |
+| Database | SQLite via SQLAlchemy 2.0 async + aiosqlite |
+| Validation | Pydantic v2 |
+| AI providers | Google Gemini (google-genai SDK), Mistral AI |
+| Image viewer | OpenSeadragon (IIIF tiled zoom) |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Router |
+| Exports | lxml (ALTO/METS XML), IIIF Presentation 3.0 |
+| Deployment | Docker (HuggingFace Spaces) |
+
+---
+
+## Quick start
+
+### Docker (recommended)
 
 ```bash
-# 1. Cloner le dépôt
-git clone https://github.com/<org>/iiif-studio && cd iiif-studio
+git clone https://github.com/maribakulj/IIIF-Studio.git && cd IIIF-Studio
 
-# 2. Définir les variables d'environnement
-cp .env.example .env          # puis renseigner les clés dans .env
+# Configure at least one AI provider key
+cp .env.example .env
+# Edit .env and add your API key(s)
 
-# 3. Démarrer le service
+# Build and run
 docker compose -f infra/docker-compose.yml up --build
 
-# 4. Vérifier
-curl http://localhost:7860/api/v1/profiles
+# Open http://localhost:7860
 ```
 
-L'API est accessible sur `http://localhost:7860`. La documentation interactive
-Swagger est disponible sur `http://localhost:7860/docs`.
+### Local development
+
+```bash
+# Backend
+cd backend
+pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 7860
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+The API is available at `http://localhost:7860/api/v1/`. Interactive Swagger docs at `http://localhost:7860/docs`.
 
 ---
 
-## Lancer les tests
+## Usage workflow
+
+1. **Create a corpus** — select a profile matching your document type
+2. **Ingest pages** — provide a IIIF manifest URL, direct image URLs, or upload files
+3. **Select an AI model** — choose a provider and model from the detected options
+4. **Run the pipeline** — AI analyzes each page: layout detection, OCR, translation, commentary
+5. **Review and correct** — use the Editor to validate, correct OCR, adjust regions
+6. **Export** — download IIIF manifest, ALTO XML, METS XML, or a ZIP bundle
+
+---
+
+## Corpus profiles
+
+Profiles control which analysis layers are active, which prompt templates are used, and what uncertainty thresholds apply.
+
+| Profile | Script | Languages | Key layers |
+|---------|--------|-----------|------------|
+| `medieval-illuminated` | Caroline | Latin, French | OCR, translation, iconography, commentary, material notes |
+| `medieval-textual` | Gothic | Latin, French | OCR, translation, scholarly commentary |
+| `early-modern-print` | Print | French, Latin | OCR, summary |
+| `modern-handwritten` | Cursive | French | OCR, summary |
+
+Custom profiles can be added as JSON files in the `profiles/` directory with matching prompt templates in `prompts/`.
+
+---
+
+## AI providers
+
+The backend auto-detects available providers from environment variables. No global selector — the model is chosen per corpus from the admin interface.
+
+| Provider | Environment variable | Notes |
+|----------|---------------------|-------|
+| Google AI Studio | `GOOGLE_AI_STUDIO_API_KEY` | Free tier, good for development |
+| Vertex AI (API key) | `VERTEX_API_KEY` | Production, pay-per-use |
+| Vertex AI (service account) | `VERTEX_SERVICE_ACCOUNT_JSON` | Institutional deployments |
+| Mistral AI | `MISTRAL_API_KEY` | Alternative provider |
+
+At least **one** key is required for the pipeline to function. Keys must **never** appear in code, commits, or Docker images.
+
+---
+
+## API reference
+
+All endpoints are prefixed with `/api/v1/`. Full OpenAPI docs available at `/docs`.
+
+### Corpus management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/corpora` | List all corpora |
+| `POST` | `/corpora` | Create a corpus (slug + title + profile) |
+| `GET` | `/corpora/{id}` | Get a corpus |
+| `DELETE` | `/corpora/{id}` | Delete a corpus (cascades) |
+| `GET` | `/corpora/{id}/manuscripts` | List manuscripts in a corpus |
+
+### Ingestion
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/corpora/{id}/ingest/iiif-manifest` | Ingest from a IIIF manifest URL |
+| `POST` | `/corpora/{id}/ingest/iiif-images` | Ingest from direct image URLs |
+| `POST` | `/corpora/{id}/ingest/files` | Upload image files |
+
+### AI pipeline
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/providers` | List detected AI providers |
+| `GET` | `/providers/{type}/models` | List models for a provider |
+| `PUT` | `/corpora/{id}/model` | Set AI model for a corpus |
+| `POST` | `/corpora/{id}/run` | Run pipeline on all pages |
+| `POST` | `/pages/{id}/run` | Run pipeline on a single page |
+| `GET` | `/jobs/{id}` | Check job status |
+| `POST` | `/jobs/{id}/retry` | Retry a failed job |
+
+### Pages and content
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/pages/{id}` | Page metadata |
+| `GET` | `/pages/{id}/master-json` | Full page master (canonical JSON) |
+| `GET` | `/pages/{id}/layers` | List annotation layers |
+| `POST` | `/pages/{id}/corrections` | Apply editorial corrections |
+| `GET` | `/pages/{id}/history` | Version history |
+| `GET` | `/search?q=` | Full-text search across all pages |
+
+### Export
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/manuscripts/{id}/iiif-manifest` | IIIF Presentation 3.0 manifest |
+| `GET` | `/manuscripts/{id}/mets` | METS XML |
+| `GET` | `/pages/{id}/alto` | ALTO XML |
+| `GET` | `/manuscripts/{id}/export.zip` | ZIP bundle (manifest + METS + ALTO) |
+
+---
+
+## Data model
+
+Each analyzed page produces a `master.json` — the canonical source of truth for all exports.
+
+```
+PageMaster
+├── image          → IIIF service URL, canvas dimensions, provenance
+├── layout         → regions with bounding boxes [x, y, w, h] in absolute pixels
+├── ocr            → diplomatic text, confidence, uncertain segments
+├── translation    → French, English
+├── summary        → short + detailed
+├── commentary     → public, scholarly, sourced claims with certainty levels
+├── extensions     → profile-specific data (iconography, materiality, etc.)
+├── processing     → provider, model, prompt version, timestamp
+└── editorial      → status (machine_draft → validated → published), version
+```
+
+Bounding boxes follow the convention `[x, y, width, height]` in absolute pixels of the original image. Coordinates are automatically scaled from AI analysis space to full canvas dimensions.
+
+---
+
+## IIIF-native image handling
+
+IIIF Studio operates in two modes:
+
+### IIIF-native mode (default for manifest/URL ingestion)
+- Images are **never downloaded or stored** locally
+- At ingestion: IIIF Image Service URL and canvas dimensions are extracted from the manifest
+- At analysis: a 1500px derivative is fetched in memory via the IIIF Image API (`{service}/full/!1500,1500/0/default.jpg`), sent to the AI, then discarded
+- In the viewer: OpenSeadragon loads `info.json` from the IIIF server for native tiled deep zoom
+- Storage per page: **~5 KB** (JSON metadata only)
+
+### File upload mode (for non-IIIF sources)
+- Uploaded images are stored locally in `data/corpora/{slug}/`
+- Derivatives (1500px) and thumbnails (256px) are created on disk
+- Storage per page: **~50 MB** (images + JSON)
+
+---
+
+## Project structure
+
+```
+IIIF-Studio/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI entry point
+│   │   ├── config.py            # Pydantic settings from env vars
+│   │   ├── api/v1/              # REST endpoints
+│   │   ├── models/              # SQLAlchemy ORM models
+│   │   ├── schemas/             # Pydantic v2 schemas (canonical)
+│   │   └── services/
+│   │       ├── ai/              # Provider factory, analyzer, prompt loader
+│   │       ├── ingest/          # IIIF fetcher, service detection
+│   │       ├── image/           # Normalizer (in-memory + legacy disk)
+│   │       └── export/          # ALTO, METS, IIIF manifest generators
+│   ├── tests/                   # 585 tests (pytest + pytest-asyncio)
+│   └── pyproject.toml
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx              # React Router (/, /admin, /reader, /editor)
+│   │   ├── lib/api.ts           # Typed API client
+│   │   ├── pages/               # Home, Reader, Editor, Admin
+│   │   └── components/          # Viewer (OpenSeadragon), retro UI system
+│   └── package.json
+├── profiles/                    # 4 corpus profile JSON files
+├── prompts/                     # 9 prompt templates organized by profile
+├── Dockerfile                   # Multi-stage build (Node + Python)
+├── infra/docker-compose.yml     # Local development
+└── .env.example                 # Environment variable template
+```
+
+---
+
+## Testing
 
 ```bash
 cd backend
@@ -67,50 +277,32 @@ pip install -e ".[dev]"
 pytest tests/ -v --cov=app
 ```
 
-Résultat attendu : **563 passed, 3 skipped**.
+Expected result: **585 passed, 3 skipped**.
+
+All AI calls are mocked in tests — no API keys required to run the test suite.
 
 ---
 
-## Profils disponibles
+## Deployment
 
-| Profil | Description |
-|--------|-------------|
-| `medieval-illuminated` | Manuscrits médiévaux enluminés (OCR diplomatique, iconographie, commentaire) |
-| `medieval-textual`     | Manuscrits médiévaux textuels (OCR, traduction, commentaire savant) |
-| `early-modern-print`   | Imprimés anciens (incunables, livres des XVIe–XVIIIe siècles) |
-| `modern-handwritten`   | Documents manuscrits modernes (cursive, archives, chartes) |
+### HuggingFace Spaces
+
+This repository is configured for [HuggingFace Spaces](https://huggingface.co/spaces) with Docker SDK on port 7860. AI keys are stored as Space secrets (Settings → Repository secrets).
+
+The CI pipeline (`.github/workflows/`) runs tests on every push and auto-deploys to HuggingFace Spaces on merge to `main`.
+
+### Self-hosted
 
 ```bash
-# Lister les profils via l'API
-curl http://localhost:7860/api/v1/profiles
+docker build -t iiif-studio .
+docker run -p 7860:7860 \
+  -e GOOGLE_AI_STUDIO_API_KEY=your_key \
+  -v ./data:/app/data \
+  iiif-studio
 ```
 
 ---
 
-## Providers IA
+## License
 
-Le backend détecte automatiquement quels providers sont disponibles selon les
-variables d'environnement présentes. Pas de sélecteur global `AI_PROVIDER` —
-le modèle est choisi par corpus depuis l'interface d'administration.
-
-| Provider | Variable d'environnement |
-|----------|--------------------------|
-| Google AI Studio | `GOOGLE_AI_STUDIO_API_KEY` |
-| Vertex AI (clé API) | `VERTEX_API_KEY` |
-| Vertex AI (compte de service) | `VERTEX_SERVICE_ACCOUNT_JSON` |
-| Mistral AI | `MISTRAL_API_KEY` |
-
-Au moins **une** clé est nécessaire pour que le pipeline fonctionne.
-
-Les clés ne doivent **jamais** figurer dans le code, les commits ou l'image Docker.
-Sur HuggingFace Spaces, les renseigner dans **Settings → Repository secrets**.
-
----
-
-## Déploiement HuggingFace Spaces
-
-Ce dépôt est configuré pour HuggingFace Spaces (SDK Docker, port 7860).
-Les artefacts de traitement (images, JSON maîtres, exports XML) sont stockés
-sur HuggingFace Datasets — pas dans l'image Docker.
-
-Voir `.huggingface/README.md` pour la configuration spécifique du Space.
+[Apache License 2.0](LICENSE)
