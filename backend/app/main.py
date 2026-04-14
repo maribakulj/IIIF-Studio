@@ -23,6 +23,19 @@ from app.models.database import Base, engine
 logger = logging.getLogger(__name__)
 
 
+def _migrate_model_configs(connection) -> None:
+    """Ajoute la colonne supports_vision si absente (migration BDD existantes)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(connection)
+    columns = {c["name"] for c in inspector.get_columns("model_configs")}
+    if "supports_vision" not in columns:
+        connection.execute(
+            text("ALTER TABLE model_configs ADD COLUMN supports_vision BOOLEAN NOT NULL DEFAULT 1")
+        )
+        logger.info("Migration : colonne supports_vision ajoutée à model_configs")
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Crée les tables SQLite au démarrage, libère l'engine à l'arrêt."""
@@ -52,6 +65,9 @@ async def lifespan(application: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Migration : ajouter supports_vision aux model_configs existantes
+        # (create_all ne fait pas d'ALTER TABLE sur les tables existantes)
+        await conn.run_sync(_migrate_model_configs)
     logger.info("Tables SQLite initialisées")
     yield
     await engine.dispose()
