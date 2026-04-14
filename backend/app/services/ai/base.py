@@ -42,13 +42,21 @@ class AIProvider(ABC):
         ...
 
     @abstractmethod
-    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str) -> str:
+    def generate_content(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        model_id: str,
+        supports_vision: bool = True,
+    ) -> str:
         """Envoie une image + prompt à l'IA et retourne le texte brut de la réponse.
 
         Args:
             image_bytes: contenu JPEG de l'image dérivée.
             prompt: texte du prompt rendu depuis le template.
             model_id: identifiant technique du modèle à utiliser.
+            supports_vision: True si le modèle accepte les images (déterminé
+                par l'API du provider lors du listing, stocké en BDD).
 
         Returns:
             Texte brut retourné par l'API (avant parsing).

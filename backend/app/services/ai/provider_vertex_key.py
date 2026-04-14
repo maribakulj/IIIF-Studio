@@ -57,5 +57,5 @@ class VertexAPIKeyProvider(AIProvider):
     def list_models(self) -> list[ModelInfo]:
         raise RuntimeError(_UNAVAILABLE_MSG)
 
-    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str) -> str:
+    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str, supports_vision: bool = True) -> str:
         raise RuntimeError(_UNAVAILABLE_MSG)

@@ -72,18 +72,22 @@ def _is_ocr_model(model_id: str) -> bool:
     return "ocr" in model_id.lower()
 
 
+
 def _model_supports_vision(model_id: str, model_obj: object = None) -> bool:
     """Détecte si un modèle Mistral supporte les entrées image.
 
-    Utilise capabilities.vision si disponible (objet SDK v1.x),
-    sinon se rabat sur la présence de 'pixtral', 'vision' ou 'ocr' dans l'ID.
+    Source de vérité unique : capabilities.vision retourné par l'API Mistral.
+    Aucune liste hardcodée de noms de modèles — l'API fait autorité.
+    Si capabilities n'est pas disponible (SDK ancien), retourne False
+    par sécurité (le modèle sera utilisé en mode texte seul).
     """
     if model_obj is not None:
         caps = getattr(model_obj, "capabilities", None)
         if caps is not None:
             return bool(getattr(caps, "vision", False))
-    mid = model_id.lower()
-    return "pixtral" in mid or "vision" in mid or "ocr" in mid
+    # Sans objet modèle (fallback statique), on ne peut pas deviner :
+    # retourner False pour éviter d'envoyer une image à un modèle texte seul.
+    return False
 
 
 class MistralProvider(AIProvider):
@@ -180,18 +184,25 @@ class MistralProvider(AIProvider):
         )
         return list(_MISTRAL_FALLBACK_MODELS)
 
-    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str) -> str:
+    def generate_content(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        model_id: str,
+        supports_vision: bool = True,
+    ) -> str:
         """Envoie image + prompt à Mistral et retourne le texte brut.
 
         Trois chemins selon le modèle :
           1. OCR (mistral-ocr-latest) :
                client.ocr.process() → markdown de toutes les pages concaténées.
-               L'endpoint OCR retourne du texte structuré, pas des messages chat.
-          2. Vision (Pixtral) :
+          2. Vision (supports_vision=True) :
                client.chat.complete() avec content multimodal (image base64 + texte).
-          3. Texte seul (Mistral Large, Small, Codestral) :
+          3. Texte seul (supports_vision=False) :
                client.chat.complete() avec prompt texte uniquement.
-               L'image n'est pas transmise (avertissement loggé).
+
+        Le flag supports_vision est déterminé dynamiquement par l'API Mistral
+        lors du listing des modèles (capabilities.vision), puis stocké en BDD.
         """
         if not self.is_configured():
             raise RuntimeError(
@@ -222,8 +233,8 @@ class MistralProvider(AIProvider):
                 getattr(page, "markdown", "") for page in pages
             )
 
-        # ── Chemin 2 : Vision multimodale (Pixtral) ──────────────────────────
-        if _model_supports_vision(model_id):
+        # ── Chemin 2 : Vision multimodale ────────────────────────────────────
+        if supports_vision:
             content: object = [
                 {"type": "image_url", "image_url": {"url": data_url}},
                 {"type": "text", "text": prompt},

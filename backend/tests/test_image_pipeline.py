@@ -261,8 +261,11 @@ def test_fetch_iiif_image_success():
     """Retourne les bytes de l'image si la requête réussit."""
     fake_bytes = _make_jpeg_bytes(100, 100)
 
-    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get:
+    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get, \
+         patch("app.services.ingest.iiif_fetcher.time.sleep"), \
+         patch("app.services.ingest.iiif_fetcher.time.monotonic", return_value=0.0):
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.content = fake_bytes
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
@@ -272,15 +275,18 @@ def test_fetch_iiif_image_success():
     assert result == fake_bytes
     _, kwargs = mock_get.call_args
     assert kwargs["follow_redirects"] is True
-    # Timeout is now an httpx.Timeout object (connect=10s, read=30s)
-    assert kwargs["timeout"].connect == 10.0
-    assert kwargs["timeout"].read == 30.0
+    # Timeout is an httpx.Timeout object (connect=15s, read=60s)
+    assert kwargs["timeout"].connect == 15.0
+    assert kwargs["timeout"].read == 60.0
 
 
 def test_fetch_iiif_image_http_error():
-    """Propage HTTPStatusError si le serveur répond 404."""
-    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get:
+    """Propage HTTPStatusError si le serveur répond 404 (pas de retry sur 4xx hors 429)."""
+    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get, \
+         patch("app.services.ingest.iiif_fetcher.time.sleep"), \
+         patch("app.services.ingest.iiif_fetcher.time.monotonic", return_value=0.0):
         mock_response = MagicMock()
+        mock_response.status_code = 404
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "404 Not Found",
             request=MagicMock(),
@@ -293,8 +299,10 @@ def test_fetch_iiif_image_http_error():
 
 
 def test_fetch_iiif_image_timeout():
-    """Propage TimeoutException si la requête dépasse le délai."""
-    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get:
+    """Propage TimeoutException après épuisement des retries."""
+    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get, \
+         patch("app.services.ingest.iiif_fetcher.time.sleep"), \
+         patch("app.services.ingest.iiif_fetcher.time.monotonic", return_value=0.0):
         mock_get.side_effect = httpx.TimeoutException("timed out")
 
         with pytest.raises(httpx.TimeoutException):
@@ -305,8 +313,11 @@ def test_fetch_iiif_image_custom_timeout():
     """Le timeout personnalisé est bien transmis à httpx.get."""
     fake_bytes = _make_jpeg_bytes(50, 50)
 
-    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get:
+    with patch("app.services.ingest.iiif_fetcher.httpx.get") as mock_get, \
+         patch("app.services.ingest.iiif_fetcher.time.sleep"), \
+         patch("app.services.ingest.iiif_fetcher.time.monotonic", return_value=0.0):
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.content = fake_bytes
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
@@ -314,9 +325,9 @@ def test_fetch_iiif_image_custom_timeout():
         fetch_iiif_image("https://example.com/img.jpg", timeout=120.0)
 
     _, kwargs = mock_get.call_args
-    # Custom timeout wraps in httpx.Timeout(120.0, connect=10.0)
+    # Custom timeout wraps in httpx.Timeout(120.0, connect=15.0)
     assert kwargs["timeout"].read == 120.0
-    assert kwargs["timeout"].connect == 10.0
+    assert kwargs["timeout"].connect == 15.0
 
 
 # ---------------------------------------------------------------------------

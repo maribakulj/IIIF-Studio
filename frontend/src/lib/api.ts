@@ -280,11 +280,13 @@ export const selectModel = (
   modelId: string,
   displayName: string,
   providerType: string,
+  supportsVision: boolean = true,
 ): Promise<CorpusModelConfig> =>
   put(`/api/v1/corpora/${corpusId}/model`, {
     model_id: modelId,
     display_name: displayName,
     provider_type: providerType,
+    supports_vision: supportsVision,
   })
 
 export const deleteCorpus = (id: string): Promise<void> =>
@@ -295,6 +297,7 @@ export interface CorpusModelConfig {
   selected_model_id: string
   selected_model_display_name: string
   provider_type: string
+  supports_vision: boolean
   updated_at: string
 }
 

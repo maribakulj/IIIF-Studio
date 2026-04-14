@@ -8,7 +8,7 @@ La clé API n'est JAMAIS stockée ici (R06) — elle reste dans l'environnement.
 from datetime import datetime
 
 # 2. third-party
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 # 3. local
@@ -26,4 +26,5 @@ class ModelConfigDB(Base):
     provider_type: Mapped[str] = mapped_column(String, nullable=False)
     selected_model_id: Mapped[str] = mapped_column(String, nullable=False)
     selected_model_display_name: Mapped[str] = mapped_column(String, nullable=False)
+    supports_vision: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
