@@ -32,10 +32,13 @@ engine = create_async_engine(
 
 # Activer les clés étrangères SQLite (désactivées par défaut).
 # Nécessaire pour que ondelete="CASCADE" / "SET NULL" fonctionne.
+# Note : on n'appelle PAS cursor.close() car avec aiosqlite le curseur
+# retourne une coroutine pour close(), ce qui provoque un RuntimeWarning
+# « coroutine 'Cursor.close' was never awaited ». Le curseur PRAGMA est
+# éphémère et libéré automatiquement.
 @event.listens_for(engine.sync_engine, "connect")
 def _set_sqlite_pragma(dbapi_conn, _connection_record):
-    cursor = dbapi_conn.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
 async_session_factory = async_sessionmaker(
     engine,
