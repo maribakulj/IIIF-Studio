@@ -190,6 +190,28 @@ export interface CorpusProfile {
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Extract a human-readable error message from a FastAPI error response.
+ * FastAPI may return { detail: "string" } or { detail: [{loc, msg, type}, ...] }
+ * for validation errors (422). This function handles both cases.
+ */
+function extractDetail(payload: unknown, fallback: string): string {
+  if (!payload || typeof payload !== 'object') return fallback
+  const detail = (payload as Record<string, unknown>).detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    // FastAPI validation error: [{loc: [...], msg: "...", type: "..."}]
+    const messages = detail
+      .map((e: Record<string, unknown>) => {
+        const loc = Array.isArray(e.loc) ? e.loc.join(' → ') : ''
+        return loc ? `${loc} : ${e.msg}` : String(e.msg ?? '')
+      })
+      .filter(Boolean)
+    return messages.length > 0 ? messages.join(' ; ') : fallback
+  }
+  return fallback
+}
+
 async function get<T>(path: string): Promise<T> {
   const resp = await fetch(`${BASE_URL}${path}`)
   if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${path}`)
@@ -204,8 +226,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   })
   if (!resp.ok) {
     const payload = await resp.json().catch(() => null)
-    const detail = (payload as { detail?: string } | null)?.detail
-    throw new Error(detail ?? `HTTP ${resp.status} — ${path}`)
+    throw new Error(extractDetail(payload, `HTTP ${resp.status} — ${path}`))
   }
   return resp.json() as Promise<T>
 }
@@ -218,8 +239,7 @@ async function put<T>(path: string, body?: unknown): Promise<T> {
   })
   if (!resp.ok) {
     const payload = await resp.json().catch(() => null)
-    const detail = (payload as { detail?: string } | null)?.detail
-    throw new Error(detail ?? `HTTP ${resp.status} — ${path}`)
+    throw new Error(extractDetail(payload, `HTTP ${resp.status} — ${path}`))
   }
   return resp.json() as Promise<T>
 }
@@ -228,8 +248,7 @@ async function del(path: string): Promise<void> {
   const resp = await fetch(`${BASE_URL}${path}`, { method: 'DELETE' })
   if (!resp.ok) {
     const payload = await resp.json().catch(() => null)
-    const detail = (payload as { detail?: string } | null)?.detail
-    throw new Error(detail ?? `HTTP ${resp.status} — ${path}`)
+    throw new Error(extractDetail(payload, `HTTP ${resp.status} — ${path}`))
   }
 }
 
@@ -237,8 +256,7 @@ async function postForm<T>(path: string, data: FormData): Promise<T> {
   const resp = await fetch(`${BASE_URL}${path}`, { method: 'POST', body: data })
   if (!resp.ok) {
     const payload = await resp.json().catch(() => null)
-    const detail = (payload as { detail?: string } | null)?.detail
-    throw new Error(detail ?? `HTTP ${resp.status} — ${path}`)
+    throw new Error(extractDetail(payload, `HTTP ${resp.status} — ${path}`))
   }
   return resp.json() as Promise<T>
 }
