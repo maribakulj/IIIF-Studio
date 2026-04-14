@@ -96,9 +96,15 @@ def test_vision_detection_pixtral_by_name():
     assert _model_supports_vision("pixtral-12b-2409") is True
 
 
+def test_vision_detection_multimodal_models_by_name():
+    """Mistral Small 25.01+ et Mistral Medium sont multimodaux."""
+    assert _model_supports_vision("mistral-small-latest") is True
+    assert _model_supports_vision("mistral-small-2501") is True
+    assert _model_supports_vision("mistral-medium-latest") is True
+
+
 def test_vision_detection_text_models_by_name():
     assert _model_supports_vision("mistral-large-latest") is False
-    assert _model_supports_vision("mistral-small-latest") is False
     assert _model_supports_vision("codestral-latest") is False
 
 

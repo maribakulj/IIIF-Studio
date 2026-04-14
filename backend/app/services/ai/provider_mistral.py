@@ -72,18 +72,26 @@ def _is_ocr_model(model_id: str) -> bool:
     return "ocr" in model_id.lower()
 
 
+
+# Modèles Mistral connus pour supporter la vision (multimodaux).
+# Mistral Small 25.01+ et Mistral Medium sont multimodaux.
+# Cette liste sert de fallback quand capabilities.vision n'est pas exposé par le SDK.
+_VISION_MODEL_SUBSTRINGS = ("pixtral", "vision", "ocr", "mistral-small", "mistral-medium")
+
+
 def _model_supports_vision(model_id: str, model_obj: object = None) -> bool:
     """Détecte si un modèle Mistral supporte les entrées image.
 
     Utilise capabilities.vision si disponible (objet SDK v1.x),
-    sinon se rabat sur la présence de 'pixtral', 'vision' ou 'ocr' dans l'ID.
+    sinon se rabat sur la présence de sous-chaînes connues dans l'ID du modèle.
+    Mistral Small (25.01+) et Mistral Medium sont multimodaux.
     """
     if model_obj is not None:
         caps = getattr(model_obj, "capabilities", None)
         if caps is not None:
             return bool(getattr(caps, "vision", False))
     mid = model_id.lower()
-    return "pixtral" in mid or "vision" in mid or "ocr" in mid
+    return any(sub in mid for sub in _VISION_MODEL_SUBSTRINGS)
 
 
 class MistralProvider(AIProvider):
