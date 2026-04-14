@@ -45,6 +45,7 @@ class ModelSelectRequest(BaseModel):
     model_id: str = Field(..., min_length=1, max_length=256)
     provider_type: str = Field(..., min_length=1, max_length=64)
     display_name: str = Field("", max_length=256)
+    supports_vision: bool = Field(True)
 
 
 class ModelConfigResponse(BaseModel):
@@ -54,6 +55,7 @@ class ModelConfigResponse(BaseModel):
     provider_type: str
     selected_model_id: str
     selected_model_display_name: str
+    supports_vision: bool
     updated_at: datetime
 
 
@@ -133,6 +135,7 @@ async def set_corpus_model(
             provider_type=body.provider_type,
             selected_model_id=body.model_id,
             selected_model_display_name=display_name,
+            supports_vision=body.supports_vision,
             updated_at=datetime.now(timezone.utc),
         )
         db.add(config)
@@ -140,6 +143,7 @@ async def set_corpus_model(
         config.provider_type = body.provider_type
         config.selected_model_id = body.model_id
         config.selected_model_display_name = display_name
+        config.supports_vision = body.supports_vision
         config.updated_at = datetime.now(timezone.utc)
 
     await db.commit()

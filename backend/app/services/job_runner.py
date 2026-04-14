@@ -126,7 +126,7 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             selected_model_id=model_db.selected_model_id,
             selected_model_display_name=model_db.selected_model_display_name,
             provider=ProviderType(model_db.provider_type),
-            supports_vision=True,
+            supports_vision=model_db.supports_vision,
             last_fetched_at=model_db.updated_at,
             available_models=[],
         )

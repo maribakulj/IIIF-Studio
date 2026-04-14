@@ -55,7 +55,7 @@ class GoogleAIProvider(AIProvider):
         )
         return result
 
-    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str) -> str:
+    def generate_content(self, image_bytes: bytes, prompt: str, model_id: str, supports_vision: bool = True) -> str:
         if not self.is_configured():
             raise RuntimeError(f"Variable d'environnement manquante : {_ENV_KEY}")
         client = genai.Client(api_key=os.environ[_ENV_KEY])

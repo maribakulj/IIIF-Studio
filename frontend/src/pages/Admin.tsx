@@ -190,7 +190,7 @@ function ModelPanel({ corpusId, onSaved }: ModelPanelProps) {
     setSavingModel(true)
     const model = models.find((m) => m.model_id === selectedModelId)
     try {
-      await selectModel(corpusId, selectedModelId, model?.display_name ?? selectedModelId, selectedProvider)
+      await selectModel(corpusId, selectedModelId, model?.display_name ?? selectedModelId, selectedProvider, model?.supports_vision ?? true)
       const updated = await getCorpusModel(corpusId)
       setCurrentModel(updated)
       setSaveSuccess(`Modele "${model?.display_name ?? selectedModelId}" associe.`)

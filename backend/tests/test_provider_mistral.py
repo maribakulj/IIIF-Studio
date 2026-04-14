@@ -88,37 +88,34 @@ def _make_fake_mistralai(models: list[_FakeModel] | None = None) -> _types.Modul
 
 
 # ---------------------------------------------------------------------------
-# _model_supports_vision() — helper pur
+# _model_supports_vision() — détection dynamique via l'API
 # ---------------------------------------------------------------------------
 
-def test_vision_detection_pixtral_by_name():
-    assert _model_supports_vision("pixtral-large-latest") is True
-    assert _model_supports_vision("pixtral-12b-2409") is True
-
-
-def test_vision_detection_multimodal_models_by_name():
-    """Mistral Small 25.01+ et Mistral Medium sont multimodaux."""
-    assert _model_supports_vision("mistral-small-latest") is True
-    assert _model_supports_vision("mistral-small-2501") is True
-    assert _model_supports_vision("mistral-medium-latest") is True
-
-
-def test_vision_detection_text_models_by_name():
-    assert _model_supports_vision("mistral-large-latest") is False
+def test_vision_detection_without_model_obj_returns_false():
+    """Sans objet modèle (pas de capabilities), retourne False par sécurité."""
+    assert _model_supports_vision("pixtral-large-latest") is False
+    assert _model_supports_vision("mistral-small-latest") is False
     assert _model_supports_vision("codestral-latest") is False
 
 
-def test_vision_detection_uses_capabilities_when_available():
+def test_vision_detection_uses_capabilities_from_api():
+    """La source de vérité est capabilities.vision retourné par l'API Mistral."""
     m_vision = _FakeModel("some-model", vision=True)
     m_text = _FakeModel("some-model", vision=False)
     assert _model_supports_vision("some-model", m_vision) is True
     assert _model_supports_vision("some-model", m_text) is False
 
 
-def test_vision_detection_capabilities_override_name():
-    """capabilities.vision=False surpasse un nom contenant 'pixtral'."""
+def test_vision_detection_capabilities_false_on_any_model():
+    """capabilities.vision=False → pas de vision, quel que soit le nom."""
     m = _FakeModel("pixtral-test", vision=False)
     assert _model_supports_vision("pixtral-test", m) is False
+
+
+def test_vision_detection_capabilities_true_on_any_model():
+    """capabilities.vision=True → vision activée, quel que soit le nom."""
+    m = _FakeModel("mistral-small-latest", vision=True)
+    assert _model_supports_vision("mistral-small-latest", m) is True
 
 
 # ---------------------------------------------------------------------------
@@ -269,25 +266,27 @@ def test_list_models_fallback_backward_compat():
 # ---------------------------------------------------------------------------
 
 def test_generate_content_vision_model_returns_text(monkeypatch):
-    """Modèle vision (Pixtral) : envoie l'image et retourne la réponse."""
+    """Modèle vision : envoie l'image et retourne la réponse."""
     monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
     fake = _make_fake_mistralai()
     monkeypatch.setitem(sys.modules, "mistralai", fake)
 
     result = MistralProvider().generate_content(
-        b"fake-jpeg", "Analyse ce folio.", "pixtral-large-latest"
+        b"fake-jpeg", "Analyse ce folio.", "pixtral-large-latest",
+        supports_vision=True,
     )
     assert result == "Voici le JSON de la page."
 
 
 def test_generate_content_text_model_returns_text(monkeypatch):
-    """Modèle texte (Mistral Large) : envoie seulement le prompt, retourne la réponse."""
+    """Modèle texte (supports_vision=False) : envoie seulement le prompt."""
     monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
     fake = _make_fake_mistralai()
     monkeypatch.setitem(sys.modules, "mistralai", fake)
 
     result = MistralProvider().generate_content(
-        b"fake-jpeg", "Analyse ce folio.", "mistral-large-latest"
+        b"fake-jpeg", "Analyse ce folio.", "mistral-large-latest",
+        supports_vision=False,
     )
     assert result == "Voici le JSON de la page."
 
@@ -311,7 +310,7 @@ def test_generate_content_vision_sends_image_url(monkeypatch):
     fake.Mistral = _FakeMistral
     monkeypatch.setitem(sys.modules, "mistralai", fake)
 
-    MistralProvider().generate_content(b"jpeg", "prompt", "pixtral-large-latest")
+    MistralProvider().generate_content(b"jpeg", "prompt", "pixtral-large-latest", supports_vision=True)
 
     assert len(captured) == 1
     content = captured[0]["content"]
@@ -322,7 +321,7 @@ def test_generate_content_vision_sends_image_url(monkeypatch):
 
 
 def test_generate_content_text_sends_string_content(monkeypatch):
-    """Modèle texte : le message content est une chaîne (pas d'image)."""
+    """Modèle texte (supports_vision=False) : le message content est une chaîne (pas d'image)."""
     monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
     captured: list[dict] = []
 
@@ -340,7 +339,7 @@ def test_generate_content_text_sends_string_content(monkeypatch):
     fake.Mistral = _FakeMistral
     monkeypatch.setitem(sys.modules, "mistralai", fake)
 
-    MistralProvider().generate_content(b"jpeg", "mon prompt", "mistral-large-latest")
+    MistralProvider().generate_content(b"jpeg", "mon prompt", "mistral-large-latest", supports_vision=False)
 
     assert len(captured) == 1
     assert captured[0]["content"] == "mon prompt"
@@ -485,7 +484,7 @@ def test_generate_content_ocr_model_not_called_for_vision(monkeypatch):
     fake.Mistral = _FakeMistral
     monkeypatch.setitem(sys.modules, "mistralai", fake)
 
-    MistralProvider().generate_content(b"jpeg", "prompt", "pixtral-large-latest")
+    MistralProvider().generate_content(b"jpeg", "prompt", "pixtral-large-latest", supports_vision=True)
     assert len(ocr_called) == 0
 
 

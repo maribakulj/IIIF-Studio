@@ -121,6 +121,7 @@ def run_primary_analysis(
         image_bytes=jpeg_bytes,
         prompt=prompt_text,
         model_id=model_config.selected_model_id,
+        supports_vision=model_config.supports_vision,
     )
 
     # ── 4. Écriture ai_raw.json TOUJOURS EN PREMIER (R05) ─────────────────
