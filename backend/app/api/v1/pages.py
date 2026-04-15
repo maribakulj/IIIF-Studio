@@ -410,7 +410,11 @@ async def get_page_history(
             versions.append(
                 VersionInfo(version=version_num, saved_at=saved_at, status=status)
             )
-        except (json.JSONDecodeError, KeyError, OSError):
+        except (json.JSONDecodeError, KeyError, OSError) as exc:
+            logger.warning(
+                "Archive master.json corrompue, ignorée",
+                extra={"path": str(vpath), "error": str(exc)},
+            )
             continue
 
     return sorted(versions, key=lambda v: v.version)

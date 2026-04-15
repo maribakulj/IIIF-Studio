@@ -59,11 +59,22 @@ class GoogleAIProvider(AIProvider):
         if not self.is_configured():
             raise RuntimeError(f"Variable d'environnement manquante : {_ENV_KEY}")
         client = genai.Client(api_key=os.environ[_ENV_KEY])
-        image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+
+        if supports_vision:
+            image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+            contents = [image_part, prompt]
+        else:
+            logger.warning(
+                "Modèle texte seul sélectionné pour une analyse image : %s. "
+                "L'image ne sera pas transmise à l'API.",
+                model_id,
+            )
+            contents = [prompt]
+
         try:
             response = client.models.generate_content(
                 model=model_id,
-                contents=[image_part, prompt],
+                contents=contents,
             )
         except Exception as exc:
             logger.error(
@@ -71,4 +82,7 @@ class GoogleAIProvider(AIProvider):
                 extra={"model": model_id, "error": str(exc)},
             )
             raise RuntimeError(f"Erreur API Google AI Studio ({model_id}) : {exc}") from exc
+
+        if not response.text:
+            logger.warning("Réponse IA vide (filtres de sécurité ou modèle muet)", extra={"model": model_id})
         return response.text or ""

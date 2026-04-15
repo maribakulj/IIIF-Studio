@@ -158,7 +158,12 @@ async def get_alto(page_id: str, db: AsyncSession = Depends(get_db)) -> Response
         raise HTTPException(status_code=404, detail="Page introuvable")
 
     manuscript = await db.get(ManuscriptModel, page.manuscript_id)
+    if manuscript is None:
+        raise HTTPException(status_code=404, detail="Manuscrit introuvable")
+
     corpus = await db.get(CorpusModel, manuscript.corpus_id)
+    if corpus is None:
+        raise HTTPException(status_code=404, detail="Corpus introuvable")
 
     master = await _read_master_json(corpus.slug, page_id)
     if master is None:

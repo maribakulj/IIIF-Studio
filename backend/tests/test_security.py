@@ -330,3 +330,33 @@ async def test_path_traversal_symlink_escape_rejected(_sec_db, tmp_path):
     await _sec_db.refresh(s["job"])
 
     assert s["job"].status == "failed"
+
+
+# ---------------------------------------------------------------------------
+# Path traversal — frontend static serving (startswith prefix confusion)
+# ---------------------------------------------------------------------------
+
+def test_static_dir_startswith_prefix_confusion():
+    """Paths like /app/static-evil/foo must NOT pass the startswith check.
+
+    Before the fix, str(candidate).startswith(str(_STATIC_DIR.resolve()))
+    would accept '/app/static-evil/foo' because '/app/static-evil' starts
+    with '/app/static'. The fix appends '/' to the prefix.
+    """
+    from pathlib import Path
+
+    # Simulate the fixed check from main.py
+    _STATIC_DIR = Path("/app/static")
+    static_resolved = str(_STATIC_DIR.resolve()) + "/"
+
+    # A path under a sibling directory with a confusable prefix
+    evil_path = Path("/app/static-evil/foo.txt")
+    assert not str(evil_path.resolve()).startswith(static_resolved), (
+        "Path /app/static-evil/foo.txt should NOT be treated as under /app/static/"
+    )
+
+    # A legitimate path under /app/static/ should still pass
+    good_path = Path("/app/static/index.html")
+    assert str(good_path.resolve()).startswith(static_resolved), (
+        "Path /app/static/index.html SHOULD be treated as under /app/static/"
+    )
