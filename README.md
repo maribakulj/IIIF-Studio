@@ -207,7 +207,6 @@ The backend auto-detects available providers from environment variables. No glob
 | Provider | Environment variable | Notes |
 |----------|---------------------|-------|
 | Google AI Studio | `GOOGLE_AI_STUDIO_API_KEY` | Free tier, good for development |
-| Vertex AI (API key) | `VERTEX_API_KEY` | Production, pay-per-use |
 | Vertex AI (service account) | `VERTEX_SERVICE_ACCOUNT_JSON` | Institutional deployments |
 | Mistral AI | `MISTRAL_API_KEY` | Alternative provider |
 

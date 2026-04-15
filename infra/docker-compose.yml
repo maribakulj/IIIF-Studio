@@ -19,7 +19,6 @@ services:
       # Le backend détecte automatiquement quels providers sont disponibles
       # selon les clés présentes. Pas de AI_PROVIDER global.
       - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY:-}
-      - VERTEX_API_KEY=${VERTEX_API_KEY:-}
       - VERTEX_SERVICE_ACCOUNT_JSON=${VERTEX_SERVICE_ACCOUNT_JSON:-}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
       # CORS — par défaut toutes origines (dev). Restreindre en production.
