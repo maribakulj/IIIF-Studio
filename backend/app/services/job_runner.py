@@ -227,6 +227,10 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
                 "(ni iiif_service_url, ni image_master_path)"
             )
 
+        # ── 6b. Index pour la recherche ─────────────────────────────────────
+        from app.services.search.indexer import index_page
+        await index_page(db, page_master)
+
         # ── 7. Générer et écrire l'ALTO XML ──────────────────────────────────
         from app.services.export.alto import generate_alto, write_alto
 

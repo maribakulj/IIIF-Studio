@@ -371,6 +371,11 @@ async def apply_corrections(
             status_code=500,
             detail=f"Impossible d'écrire master.json : {exc}",
         ) from exc
+
+    # ── Mise à jour de l'index de recherche ──────────────────────────────
+    from app.services.search.indexer import index_page
+    await index_page(db, new_master)
+
     logger.info(
         "Corrections appliquées",
         extra={"page_id": page_id, "version": new_master.editorial.version},

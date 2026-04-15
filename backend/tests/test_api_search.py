@@ -1,60 +1,49 @@
 """
-Tests de l'endpoint GET /api/v1/search (Sprint 6 — Session B).
+Tests de l'endpoint GET /api/v1/search (Sprint 4 — recherche indexée).
 
 Stratégie :
-  - Fichiers master.json réels dans tmp_path
-  - Override de settings.data_dir pour pointer sur tmp_path
+  - Données indexées directement dans la table page_search (BDD en mémoire)
   - Vérifie : 422 (paramètre manquant / trop court), résultats vides,
     correspondance OCR, insensibilité casse et accents, tri par score,
     extrait (excerpt) présent.
 """
 # 1. stdlib
-import json
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 # 2. third-party
 import pytest
 
 # 3. local
+from app.models.page_search import PageSearchIndex
 from tests.conftest_api import async_client, db_session  # noqa: F401
-
-_NOW = datetime.now(timezone.utc)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _make_master(page_id: str, diplomatic_text: str = "", translation_fr: str = "") -> dict:
-    return {
-        "schema_version": "1.0",
-        "page_id": page_id,
-        "corpus_profile": "medieval-illuminated",
-        "manuscript_id": "ms-test",
-        "folio_label": "f001r",
-        "sequence": 1,
-        "image": {"master": "https://example.com/f.jpg", "width": 1500, "height": 2000},
-        "layout": {"regions": []},
-        "ocr": {
-            "diplomatic_text": diplomatic_text,
-            "blocks": [], "lines": [], "language": "la",
-            "confidence": 0.87, "uncertain_segments": [],
-        },
-        "translation": {"fr": translation_fr, "en": ""},
-        "summary": None,
-        "commentary": {"public": "", "scholarly": "", "claims": []},
-        "editorial": {
-            "status": "machine_draft",
-            "validated": False, "validated_by": None,
-            "version": 1, "notes": [],
-        },
-    }
-
-
-def _write_master(tmp_path: Path, corpus_slug: str, page_id: str, data: dict) -> None:
-    page_dir = tmp_path / "corpora" / corpus_slug / "pages" / page_id
-    page_dir.mkdir(parents=True)
-    (page_dir / "master.json").write_text(json.dumps(data), encoding="utf-8")
+async def _index_page(
+    db,
+    page_id: str | None = None,
+    diplomatic_text: str = "",
+    translation_fr: str = "",
+    tags: str = "",
+    corpus_profile: str = "medieval-illuminated",
+    manuscript_id: str = "ms-test",
+    folio_label: str = "f001r",
+) -> str:
+    """Insère une entrée dans page_search et retourne le page_id."""
+    pid = page_id or str(uuid.uuid4())
+    entry = PageSearchIndex(
+        page_id=pid,
+        corpus_profile=corpus_profile,
+        manuscript_id=manuscript_id,
+        folio_label=folio_label,
+        diplomatic_text=diplomatic_text,
+        translation_fr=translation_fr,
+        tags=tags,
+    )
+    db.add(entry)
+    await db.commit()
+    return pid
 
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
@@ -74,50 +63,27 @@ async def test_search_q_too_short(async_client):
 
 
 @pytest.mark.asyncio
-async def test_search_empty_results(async_client, tmp_path):
-    """Retourne [] quand aucun master.json ne correspond."""
-    import app.config as config_mod
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=rien")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+async def test_search_empty_results(async_client):
+    """Retourne [] quand aucune page ne correspond."""
+    resp = await async_client.get("/api/v1/search?q=rien")
     assert resp.status_code == 200
     assert resp.json() == []
 
 
 @pytest.mark.asyncio
-async def test_search_returns_list(async_client, tmp_path):
+async def test_search_returns_list(async_client):
     """Le type de retour est toujours une liste."""
-    import app.config as config_mod
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=texte")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=texte")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
 
 @pytest.mark.asyncio
-async def test_search_finds_ocr_text(async_client, tmp_path):
-    """Trouve un master.json dont ocr.diplomatic_text contient la requête."""
-    import app.config as config_mod
+async def test_search_finds_ocr_text(async_client, db_session):
+    """Trouve une page dont diplomatic_text contient la requête."""
+    page_id = await _index_page(db_session, diplomatic_text="Incipit liber primus")
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-a", page_id, _make_master(page_id, diplomatic_text="Incipit liber primus"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=Incipit")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=Incipit")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) == 1
@@ -125,20 +91,11 @@ async def test_search_finds_ocr_text(async_client, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_search_case_insensitive(async_client, tmp_path):
+async def test_search_case_insensitive(async_client, db_session):
     """La recherche est insensible à la casse."""
-    import app.config as config_mod
+    page_id = await _index_page(db_session, diplomatic_text="INCIPIT LIBER")
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-b", page_id, _make_master(page_id, diplomatic_text="INCIPIT LIBER"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=incipit")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=incipit")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) >= 1
@@ -146,20 +103,13 @@ async def test_search_case_insensitive(async_client, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_search_accent_insensitive(async_client, tmp_path):
+async def test_search_accent_insensitive(async_client, db_session):
     """La recherche est insensible aux accents."""
-    import app.config as config_mod
+    page_id = await _index_page(
+        db_session, diplomatic_text="Édition française médiévale"
+    )
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-c", page_id, _make_master(page_id, diplomatic_text="Édition française médiévale"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=edition")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=edition")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) >= 1
@@ -167,59 +117,34 @@ async def test_search_accent_insensitive(async_client, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_search_finds_translation_fr(async_client, tmp_path):
-    """Trouve également dans translation.fr."""
-    import app.config as config_mod
+async def test_search_finds_translation_fr(async_client, db_session):
+    """Trouve également dans translation_fr."""
+    page_id = await _index_page(
+        db_session, translation_fr="Ici commence le premier livre"
+    )
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-d", page_id, _make_master(page_id, translation_fr="Ici commence le premier livre"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=premier")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=premier")
     assert resp.status_code == 200
     results = resp.json()
     assert any(r["page_id"] == page_id for r in results)
 
 
 @pytest.mark.asyncio
-async def test_search_no_match_returns_empty(async_client, tmp_path):
+async def test_search_no_match_returns_empty(async_client, db_session):
     """Ne retourne rien quand la requête ne correspond à aucun texte."""
-    import app.config as config_mod
+    await _index_page(db_session, diplomatic_text="Incipit liber")
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-e", page_id, _make_master(page_id, diplomatic_text="Incipit liber"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=xyznomatch")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=xyznomatch")
     assert resp.status_code == 200
     assert resp.json() == []
 
 
 @pytest.mark.asyncio
-async def test_search_result_has_excerpt(async_client, tmp_path):
+async def test_search_result_has_excerpt(async_client, db_session):
     """Chaque résultat contient un champ excerpt non vide."""
-    import app.config as config_mod
+    await _index_page(db_session, diplomatic_text="Incipit liber primus")
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-f", page_id, _make_master(page_id, diplomatic_text="Incipit liber primus"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=liber")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=liber")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) >= 1
@@ -227,27 +152,16 @@ async def test_search_result_has_excerpt(async_client, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_search_sorted_by_score_desc(async_client, tmp_path):
+async def test_search_sorted_by_score_desc(async_client, db_session):
     """Les résultats sont triés par score décroissant."""
-    import app.config as config_mod
+    page_id_1 = await _index_page(
+        db_session, diplomatic_text="liber liber liber"
+    )
+    page_id_2 = await _index_page(
+        db_session, diplomatic_text="liber unus"
+    )
 
-    page_id_1 = str(uuid.uuid4())
-    page_id_2 = str(uuid.uuid4())
-    # page_id_1 contient 3 occurrences, page_id_2 en contient 1
-    _write_master(tmp_path, "corpus-g", page_id_1, _make_master(
-        page_id_1, diplomatic_text="liber liber liber"
-    ))
-    _write_master(tmp_path, "corpus-g", page_id_2, _make_master(
-        page_id_2, diplomatic_text="liber unus"
-    ))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=liber")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=liber")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) == 2
@@ -256,20 +170,11 @@ async def test_search_sorted_by_score_desc(async_client, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_search_result_fields(async_client, tmp_path):
+async def test_search_result_fields(async_client, db_session):
     """Chaque résultat expose les champs attendus."""
-    import app.config as config_mod
+    await _index_page(db_session, diplomatic_text="Incipit liber")
 
-    page_id = str(uuid.uuid4())
-    _write_master(tmp_path, "corpus-h", page_id, _make_master(page_id, diplomatic_text="Incipit liber"))
-
-    original = config_mod.settings.data_dir
-    config_mod.settings.__dict__["data_dir"] = tmp_path
-    try:
-        resp = await async_client.get("/api/v1/search?q=Incipit")
-    finally:
-        config_mod.settings.__dict__["data_dir"] = original
-
+    resp = await async_client.get("/api/v1/search?q=Incipit")
     assert resp.status_code == 200
     result = resp.json()[0]
     assert "page_id" in result
@@ -278,3 +183,15 @@ async def test_search_result_fields(async_client, tmp_path):
     assert "excerpt" in result
     assert "score" in result
     assert "corpus_profile" in result
+
+
+@pytest.mark.asyncio
+async def test_search_finds_tags(async_client, db_session):
+    """Trouve dans les tags iconographiques."""
+    page_id = await _index_page(db_session, tags="apocalypse sceau martyrs")
+
+    resp = await async_client.get("/api/v1/search?q=apocalypse")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) >= 1
+    assert any(r["page_id"] == page_id for r in results)

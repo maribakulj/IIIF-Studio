@@ -27,6 +27,7 @@ router = APIRouter(tags=["jobs"])
 
 _JOB_STATUS_PENDING = "pending"
 _JOB_STATUS_FAILED = "failed"
+_ACTIVE_STATUSES = ("pending", "claimed", "running")
 
 
 # ── Schémas de réponse ────────────────────────────────────────────────────────
@@ -83,6 +84,20 @@ async def run_corpus(
     if corpus is None:
         raise HTTPException(status_code=404, detail="Corpus introuvable")
 
+    # ── Guard : rejeter si des jobs sont déjà actifs pour ce corpus ──────
+    active_result = await db.execute(
+        select(JobModel).where(
+            JobModel.corpus_id == corpus_id,
+            JobModel.status.in_(_ACTIVE_STATUSES),
+        ).limit(1)
+    )
+    if active_result.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Le pipeline est déjà en cours pour ce corpus. "
+                   "Attendez la fin des jobs actifs ou relancez les jobs échoués.",
+        )
+
     ms_result = await db.execute(
         select(ManuscriptModel).where(ManuscriptModel.corpus_id == corpus_id)
     )
@@ -128,6 +143,20 @@ async def run_page(
     manuscript = await db.get(ManuscriptModel, page.manuscript_id)
     if manuscript is None:
         raise HTTPException(status_code=404, detail="Manuscrit introuvable")
+
+    # ── Guard : rejeter si un job est déjà actif pour cette page ─────────
+    active_result = await db.execute(
+        select(JobModel).where(
+            JobModel.page_id == page_id,
+            JobModel.status.in_(_ACTIVE_STATUSES),
+        ).limit(1)
+    )
+    if active_result.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Le pipeline est déjà en cours pour cette page. "
+                   "Attendez la fin du job actif ou relancez-le s'il a échoué.",
+        )
 
     job = _new_job(manuscript.corpus_id, page_id)
     db.add(job)
