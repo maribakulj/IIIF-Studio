@@ -29,7 +29,9 @@ class CorpusModel(Base):
         DateTime, nullable=False, default=partial(datetime.now, tz=timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=partial(datetime.now, tz=timezone.utc)
+        DateTime, nullable=False,
+        default=partial(datetime.now, tz=timezone.utc),
+        onupdate=partial(datetime.now, tz=timezone.utc),
     )
 
     manuscripts: Mapped[list["ManuscriptModel"]] = relationship(

@@ -29,10 +29,10 @@ export default function RetroMenuBar({ items = [], right, className = '' }: Prop
         ${className}
       `}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
         <button
           type="button"
-          key={item.label}
+          key={`${index}-${item.label}`}
           onClick={item.onClick}
           disabled={item.disabled}
           className={`
