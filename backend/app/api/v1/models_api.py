@@ -98,7 +98,7 @@ async def get_provider_models(provider_type: str) -> list[dict]:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
         logger.warning("Erreur listing models", extra={"provider": provider_type, "error": str(exc)})
-        raise HTTPException(status_code=502, detail=f"Erreur provider : {exc}")
+        raise HTTPException(status_code=502, detail="Erreur temporaire du provider IA. Réessayez ultérieurement.")
     return [m.model_dump() for m in models]
 
 

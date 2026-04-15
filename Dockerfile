@@ -53,6 +53,10 @@ RUN mkdir -p /app/data
 # Passer au runtime via les Secrets HuggingFace Spaces :
 #   GOOGLE_AI_STUDIO_API_KEY, MISTRAL_API_KEY, VERTEX_SERVICE_ACCOUNT_JSON
 
+# ── Utilisateur non-root (sécurité) ───────────────────────────────────────
+RUN adduser --disabled-password --gecos '' appuser && chown -R appuser:appuser /app
+USER appuser
+
 # PYTHONPATH permet l'import `app.main:app` depuis /app/backend/app/
 ENV PYTHONPATH=/app/backend
 ENV PROFILES_DIR=/app/profiles
