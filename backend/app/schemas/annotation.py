@@ -22,6 +22,12 @@ class LayerStatus(str, Enum):
 
 
 class AnnotationLayer(BaseModel):
+    """Couche d'annotation de page.
+
+    NOTE: Schéma prévu pour Sprint 6 (validation humaine + couches individuelles).
+    Pas encore utilisé dans les endpoints API ni les modèles SQLAlchemy.
+    """
+
     id: str
     page_id: str
     layer_type: LayerType

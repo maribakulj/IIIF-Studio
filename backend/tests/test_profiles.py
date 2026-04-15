@@ -119,3 +119,21 @@ def test_early_modern_print_no_iconography():
 def test_modern_handwritten_no_iconography():
     profile = load_profile("modern-handwritten.json")
     assert LayerType.ICONOGRAPHY_DETECTION not in profile.active_layers
+
+
+# ---------------------------------------------------------------------------
+# Tests UncertaintyConfig cross-field validation
+# ---------------------------------------------------------------------------
+
+def test_uncertainty_config_flag_below_must_exceed_min():
+    """flag_below < min_acceptable doit lever une erreur."""
+    from app.schemas.corpus_profile import UncertaintyConfig
+    with pytest.raises(ValidationError):
+        UncertaintyConfig(flag_below=0.2, min_acceptable=0.5)
+
+
+def test_uncertainty_config_valid():
+    """flag_below >= min_acceptable est accepté."""
+    from app.schemas.corpus_profile import UncertaintyConfig
+    uc = UncertaintyConfig(flag_below=0.5, min_acceptable=0.3)
+    assert uc.flag_below == 0.5

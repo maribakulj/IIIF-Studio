@@ -882,9 +882,9 @@ Layer   : PENDING → RUNNING → DONE → FAILED → NEEDS_REVIEW → VALIDATED
 ## 12. Endpoints API — liste complète
 
 ```
-# Configuration & modèles IA
-POST   /api/v1/settings/api-key
-GET    /api/v1/models
+# Providers & modèles IA
+GET    /api/v1/providers
+GET    /api/v1/providers/{provider_type}/models
 POST   /api/v1/models/refresh
 PUT    /api/v1/corpora/{id}/model
 GET    /api/v1/corpora/{id}/model
@@ -898,6 +898,10 @@ POST   /api/v1/corpora
 GET    /api/v1/corpora
 GET    /api/v1/corpora/{id}
 DELETE /api/v1/corpora/{id}
+GET    /api/v1/corpora/{id}/manuscripts
+
+# Manuscrits
+GET    /api/v1/manuscripts/{id}/pages
 
 # Ingestion
 POST   /api/v1/corpora/{id}/ingest/files
@@ -913,9 +917,9 @@ POST   /api/v1/jobs/{job_id}/retry
 # Pages
 GET    /api/v1/pages/{id}
 GET    /api/v1/pages/{id}/master-json
-PUT    /api/v1/pages/{id}/master-json
+PUT    /api/v1/pages/{id}/master-json                    # Sprint 6+
 GET    /api/v1/pages/{id}/layers
-POST   /api/v1/pages/{id}/layers/{layer_type}/regenerate
+POST   /api/v1/pages/{id}/layers/{layer_type}/regenerate # Sprint 6+
 
 # Export
 GET    /api/v1/manuscripts/{id}/iiif-manifest
@@ -924,13 +928,14 @@ GET    /api/v1/pages/{id}/alto
 GET    /api/v1/manuscripts/{id}/export.zip
 
 # Validation
-POST   /api/v1/pages/{id}/validate
+POST   /api/v1/pages/{id}/validate                      # Sprint 6+
 POST   /api/v1/pages/{id}/corrections
 GET    /api/v1/pages/{id}/history
 
 # Recherche
 GET    /api/v1/search?q=
-GET    /api/v1/manuscripts/{id}/search?q=
+POST   /api/v1/search/reindex
+GET    /api/v1/manuscripts/{id}/search?q=                # Sprint 6+
 ```
 
 ---
