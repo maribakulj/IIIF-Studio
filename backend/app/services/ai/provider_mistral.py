@@ -63,10 +63,6 @@ _MISTRAL_FALLBACK_MODELS: list[ModelInfo] = [
     ),
 ]
 
-# Alias backward-compat (utilisé dans certains tests)
-_MISTRAL_VISION_MODELS = _MISTRAL_FALLBACK_MODELS
-
-
 def _is_ocr_model(model_id: str) -> bool:
     """Retourne True si le modèle utilise l'endpoint OCR dédié (pas chat completions)."""
     return "ocr" in model_id.lower()

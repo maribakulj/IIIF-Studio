@@ -28,11 +28,10 @@ def build_client(provider_type: ProviderType) -> genai.Client:
 
     Lit les variables d'environnement nécessaires selon le provider :
     - GOOGLE_AI_STUDIO  → GOOGLE_AI_STUDIO_API_KEY
-    - VERTEX_API_KEY    → VERTEX_API_KEY
     - VERTEX_SA         → VERTEX_SERVICE_ACCOUNT_JSON
 
     Args:
-        provider_type: type de provider (GOOGLE_AI_STUDIO, VERTEX_API_KEY,
+        provider_type: type de provider (GOOGLE_AI_STUDIO,
                        VERTEX_SERVICE_ACCOUNT).
 
     Returns:
@@ -50,19 +49,6 @@ def build_client(provider_type: ProviderType) -> genai.Client:
             )
         logger.debug("Client Google AI Studio créé")
         return genai.Client(api_key=api_key)
-
-    if provider_type == ProviderType.VERTEX_API_KEY:
-        api_key = os.environ.get("VERTEX_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "Variable d'environnement manquante : VERTEX_API_KEY"
-            )
-        logger.debug("Client Vertex AI Express (clé API) créé")
-        # vertexai=True route vers aiplatform.googleapis.com (Vertex AI).
-        # Sans vertexai=True, le SDK route vers generativelanguage.googleapis.com
-        # (Gemini Developer API) qui rejette les clés Vertex Express avec 403.
-        # project/location sont omis : mutually exclusive avec api_key dans le SDK.
-        return genai.Client(vertexai=True, api_key=api_key)
 
     if provider_type == ProviderType.VERTEX_SERVICE_ACCOUNT:
         sa_json_str = os.environ.get("VERTEX_SERVICE_ACCOUNT_JSON")

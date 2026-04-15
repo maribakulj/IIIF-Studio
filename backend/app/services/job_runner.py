@@ -129,7 +129,6 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             provider=ProviderType(model_db.provider_type),
             supports_vision=model_db.supports_vision,
             last_fetched_at=model_db.updated_at,
-            available_models=[],
         )
 
         # ── 5. Obtenir l'image pour l'IA ─────────────────────────────────────

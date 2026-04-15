@@ -4,7 +4,6 @@ Schémas Pydantic pour la configuration et la découverte des modèles IA.
 # 1. stdlib
 from datetime import datetime
 from enum import Enum
-from typing import Any
 
 # 2. third-party
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ProviderType(str, Enum):
     GOOGLE_AI_STUDIO = "google_ai_studio"
-    VERTEX_API_KEY = "vertex_api_key"
     VERTEX_SERVICE_ACCOUNT = "vertex_service_account"
     MISTRAL = "mistral"
 
@@ -39,4 +37,3 @@ class ModelConfig(BaseModel):
     provider: ProviderType
     supports_vision: bool
     last_fetched_at: datetime
-    available_models: list[dict[str, Any]]  # cache sérialisé des ModelInfo

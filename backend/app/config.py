@@ -49,7 +49,6 @@ class Settings(BaseSettings):
     # providers sont disponibles selon les clés présentes. Pas de AI_PROVIDER
     # global : le provider est choisi par corpus depuis l'interface.
     google_ai_studio_api_key: str | None = None
-    vertex_api_key: str | None = None
     vertex_service_account_json: str | None = None
     mistral_api_key: str | None = None
 

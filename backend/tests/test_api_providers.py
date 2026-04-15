@@ -26,21 +26,18 @@ _NOW = datetime.now(timezone.utc)
 
 _PROVIDERS_ALL_UNAVAILABLE = [
     {"provider_type": "google_ai_studio", "display_name": "Google AI Studio", "available": False, "model_count": 0},
-    {"provider_type": "vertex_api_key", "display_name": "Vertex AI (clé API)", "available": False, "model_count": 0},
     {"provider_type": "vertex_service_account", "display_name": "Vertex AI (compte de service)", "available": False, "model_count": 0},
     {"provider_type": "mistral", "display_name": "Mistral AI", "available": False, "model_count": 0},
 ]
 
 _PROVIDERS_GOOGLE_ONLY = [
     {"provider_type": "google_ai_studio", "display_name": "Google AI Studio", "available": True, "model_count": 2},
-    {"provider_type": "vertex_api_key", "display_name": "Vertex AI (clé API)", "available": False, "model_count": 0},
     {"provider_type": "vertex_service_account", "display_name": "Vertex AI (compte de service)", "available": False, "model_count": 0},
     {"provider_type": "mistral", "display_name": "Mistral AI", "available": False, "model_count": 0},
 ]
 
 _PROVIDERS_GOOGLE_AND_MISTRAL = [
     {"provider_type": "google_ai_studio", "display_name": "Google AI Studio", "available": True, "model_count": 3},
-    {"provider_type": "vertex_api_key", "display_name": "Vertex AI (clé API)", "available": False, "model_count": 0},
     {"provider_type": "vertex_service_account", "display_name": "Vertex AI (compte de service)", "available": False, "model_count": 0},
     {"provider_type": "mistral", "display_name": "Mistral AI", "available": True, "model_count": 2},
 ]
@@ -100,7 +97,7 @@ async def test_list_providers_returns_list(async_client, monkeypatch):
 async def test_list_providers_count(async_client, monkeypatch):
     monkeypatch.setattr("app.services.ai.model_registry.get_available_providers", lambda: _PROVIDERS_ALL_UNAVAILABLE)
     data = (await async_client.get("/api/v1/providers")).json()
-    assert len(data) == 4  # 4 providers connus
+    assert len(data) == 3  # 3 providers connus
 
 
 @pytest.mark.asyncio

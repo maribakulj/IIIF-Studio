@@ -16,7 +16,6 @@ from app.schemas.model_config import ModelConfig, ModelInfo, ProviderType
 from app.services.ai.base import is_vision_model
 from app.services.ai.model_registry import build_model_config, list_all_models
 from app.services.ai.provider_google_ai import GoogleAIProvider
-from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
 from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
 
 # ---------------------------------------------------------------------------
@@ -114,7 +113,6 @@ def test_model_config_valid():
         provider=ProviderType.GOOGLE_AI_STUDIO,
         supports_vision=True,
         last_fetched_at=datetime(2026, 3, 17, tzinfo=timezone.utc),
-        available_models=[],
     )
     assert cfg.corpus_id == "corpus-001"
     assert cfg.supports_vision is True
@@ -224,38 +222,6 @@ def test_google_ai_provider_empty_list(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Tests — VertexAPIKeyProvider
-# ---------------------------------------------------------------------------
-
-def test_vertex_key_provider_not_configured(monkeypatch):
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
-    assert VertexAPIKeyProvider().is_configured() is False
-
-
-def test_vertex_key_provider_always_unavailable_even_with_key(monkeypatch):
-    """aiplatform.googleapis.com rejette les clés API → is_configured() toujours False."""
-    monkeypatch.setenv("VERTEX_API_KEY", "fake-vertex-key")
-    assert VertexAPIKeyProvider().is_configured() is False
-
-
-def test_vertex_key_provider_type():
-    assert VertexAPIKeyProvider().provider_type == ProviderType.VERTEX_API_KEY
-
-
-def test_vertex_key_provider_list_models_raises(monkeypatch):
-    """list_models() et generate_content() lèvent RuntimeError (provider indisponible)."""
-    monkeypatch.setenv("VERTEX_API_KEY", "fake-vertex-key")
-    with pytest.raises(RuntimeError, match="aiplatform"):
-        VertexAPIKeyProvider().list_models()
-
-
-def test_vertex_key_provider_generate_content_raises(monkeypatch):
-    monkeypatch.setenv("VERTEX_API_KEY", "fake-vertex-key")
-    with pytest.raises(RuntimeError, match="aiplatform"):
-        VertexAPIKeyProvider().generate_content(b"img", "prompt", "gemini-2.0-flash")
-
-
-# ---------------------------------------------------------------------------
 # Tests — VertexServiceAccountProvider
 # ---------------------------------------------------------------------------
 
@@ -348,7 +314,7 @@ def test_vertex_sa_provider_filters_non_generate_content(monkeypatch):
 
 def test_list_all_models_no_providers_configured(monkeypatch):
     monkeypatch.delenv("GOOGLE_AI_STUDIO_API_KEY", raising=False)
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.delenv("VERTEX_SERVICE_ACCOUNT_JSON", raising=False)
     result = list_all_models()
     assert result == []
@@ -356,7 +322,7 @@ def test_list_all_models_no_providers_configured(monkeypatch):
 
 def test_list_all_models_one_provider(monkeypatch):
     monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "fake-key")
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.delenv("VERTEX_SERVICE_ACCOUNT_JSON", raising=False)
     mock_model = _make_mock_model()
 
@@ -370,11 +336,10 @@ def test_list_all_models_one_provider(monkeypatch):
 
 def test_list_all_models_aggregates_multiple_providers(monkeypatch):
     """Deux providers configurés → les deux listes sont agrégées.
-    VertexAPIKeyProvider est toujours indisponible (aiplatform n'accepte pas les clés).
     On utilise Google AI Studio + Vertex Service Account pour tester l'agrégation.
     """
     monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "fake-key-ai")
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.setenv("VERTEX_SERVICE_ACCOUNT_JSON", "{}")  # déclenche is_configured()
 
     models_ai = [ModelInfo(
@@ -404,7 +369,7 @@ def test_list_all_models_failing_provider_is_skipped(monkeypatch):
     """Un provider configuré qui échoue est ignoré ; l'autre est retourné."""
     monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "bad-key")
     monkeypatch.setenv("VERTEX_SERVICE_ACCOUNT_JSON", "{}")
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
 
     models_sa = [ModelInfo(
         model_id="models/gemini-2.0-flash",
@@ -427,7 +392,7 @@ def test_list_all_models_failing_provider_is_skipped(monkeypatch):
 
 def test_build_model_config_valid(monkeypatch):
     monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "fake-key")
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.delenv("VERTEX_SERVICE_ACCOUNT_JSON", raising=False)
     mock_model = _make_mock_model()
 
@@ -440,13 +405,11 @@ def test_build_model_config_valid(monkeypatch):
     assert cfg.selected_model_display_name == "Gemini 1.5 Pro"
     assert cfg.provider == ProviderType.GOOGLE_AI_STUDIO
     assert cfg.supports_vision is True
-    assert len(cfg.available_models) == 1
-    assert isinstance(cfg.available_models[0], dict)
 
 
 def test_build_model_config_unknown_model(monkeypatch):
     monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "fake-key")
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.delenv("VERTEX_SERVICE_ACCOUNT_JSON", raising=False)
     mock_model = _make_mock_model()
 
@@ -458,7 +421,7 @@ def test_build_model_config_unknown_model(monkeypatch):
 
 def test_build_model_config_no_providers(monkeypatch):
     monkeypatch.delenv("GOOGLE_AI_STUDIO_API_KEY", raising=False)
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
+
     monkeypatch.delenv("VERTEX_SERVICE_ACCOUNT_JSON", raising=False)
     with pytest.raises(ValueError, match="non disponible"):
         build_model_config("corpus-001", "models/gemini-1.5-pro")
