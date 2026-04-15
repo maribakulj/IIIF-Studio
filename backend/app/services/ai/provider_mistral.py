@@ -213,8 +213,10 @@ class MistralProvider(AIProvider):
         from mistralai import Mistral
 
         client = Mistral(api_key=os.environ[_ENV_KEY])
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        data_url = f"data:image/jpeg;base64,{image_b64}"
+
+        # Encodage base64 différé — calculé uniquement si le modèle a besoin de l'image
+        def _image_data_url() -> str:
+            return f"data:image/jpeg;base64,{base64.b64encode(image_bytes).decode('utf-8')}"
 
         # ── Chemin 1 : OCR dédié ─────────────────────────────────────────────
         if _is_ocr_model(model_id):
@@ -222,7 +224,7 @@ class MistralProvider(AIProvider):
             try:
                 response = client.ocr.process(
                     model=model_id,
-                    document={"type": "image_url", "image_url": {"url": data_url}},
+                    document={"type": "image_url", "image_url": {"url": _image_data_url()}},
                 )
             except Exception as exc:
                 logger.error("Appel Mistral OCR échoué", extra={"model": model_id, "error": str(exc)})
@@ -236,7 +238,7 @@ class MistralProvider(AIProvider):
         # ── Chemin 2 : Vision multimodale ────────────────────────────────────
         if supports_vision:
             content: object = [
-                {"type": "image_url", "image_url": {"url": data_url}},
+                {"type": "image_url", "image_url": {"url": _image_data_url()}},
                 {"type": "text", "text": prompt},
             ]
         # ── Chemin 3 : Texte seul ─────────────────────────────────────────────

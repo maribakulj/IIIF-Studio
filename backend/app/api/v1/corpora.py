@@ -127,13 +127,19 @@ async def delete_corpus(corpus_id: str, db: AsyncSession = Depends(get_db)) -> N
 
 @router.get("/{corpus_id}/manuscripts", response_model=list[ManuscriptResponse])
 async def list_manuscripts(
-    corpus_id: str, db: AsyncSession = Depends(get_db)
+    corpus_id: str,
+    db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Nombre d'éléments à sauter"),
+    limit: int = Query(100, ge=1, le=1000, description="Nombre maximum d'éléments"),
 ) -> list[ManuscriptModel]:
-    """Retourne tous les manuscrits d'un corpus."""
+    """Retourne les manuscrits d'un corpus (paginé)."""
     corpus = await db.get(CorpusModel, corpus_id)
     if corpus is None:
         raise HTTPException(status_code=404, detail="Corpus introuvable")
     result = await db.execute(
-        select(ManuscriptModel).where(ManuscriptModel.corpus_id == corpus_id)
+        select(ManuscriptModel)
+        .where(ManuscriptModel.corpus_id == corpus_id)
+        .offset(skip)
+        .limit(limit)
     )
     return list(result.scalars().all())

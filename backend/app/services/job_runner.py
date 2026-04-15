@@ -17,6 +17,7 @@ Sur toute exception : job → FAILED + error_message, page → ERROR.
 Aucun échec silencieux (CLAUDE.md §7).
 """
 # 1. stdlib
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -139,7 +140,8 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
 
         if page.iiif_service_url:
             # ── Mode IIIF natif : fetch en mémoire, zéro stockage ────────────
-            deriv_bytes, deriv_w, deriv_h = fetch_ai_derivative_bytes(
+            deriv_bytes, deriv_w, deriv_h = await asyncio.to_thread(
+                fetch_ai_derivative_bytes,
                 iiif_service_url=page.iiif_service_url,
                 fallback_url=None,
             )
@@ -153,7 +155,8 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             )
 
             # ── 6. Analyse primaire IA (R05 : double stockage) ───────────────
-            page_master = run_primary_analysis(
+            page_master = await asyncio.to_thread(
+                run_primary_analysis,
                 derivative_image_bytes=deriv_bytes,
                 derivative_width=deriv_w,
                 derivative_height=deriv_h,
@@ -171,10 +174,12 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
 
         elif image_source.startswith(("http://", "https://")):
             # ── Mode fallback URL : télécharge + stocke sur disque (legacy) ──
-            image_info = fetch_and_normalize(
+            image_info = await asyncio.to_thread(
+                fetch_and_normalize,
                 image_source, corpus.slug, page.folio_label, data_dir
             )
-            page_master = run_primary_analysis(
+            page_master = await asyncio.to_thread(
+                run_primary_analysis,
                 derivative_image_path=Path(image_info.derivative_path),
                 corpus_profile=corpus_profile,
                 model_config=model_config,
@@ -198,10 +203,12 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
                     f"{image_source!r} (résolu : {source_path})"
                 )
             source_bytes = source_path.read_bytes()
-            image_info = create_derivatives(
+            image_info = await asyncio.to_thread(
+                create_derivatives,
                 source_bytes, image_source, corpus.slug, page.folio_label, data_dir
             )
-            page_master = run_primary_analysis(
+            page_master = await asyncio.to_thread(
+                run_primary_analysis,
                 derivative_image_path=Path(image_info.derivative_path),
                 corpus_profile=corpus_profile,
                 model_config=model_config,
