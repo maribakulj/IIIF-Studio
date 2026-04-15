@@ -193,6 +193,15 @@ async def get_export_zip(
     manuscript, corpus, masters = await _load_manuscript_with_masters(
         manuscript_id, db
     )
+
+    if len(masters) > 500:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Le manuscrit contient {len(masters)} pages. "
+                   "L'export ZIP est limité à 500 pages maximum. "
+                   "Exportez les pages individuellement via GET /pages/{id}/alto.",
+        )
+
     meta = _build_manuscript_meta(manuscript, corpus)
 
     buf = io.BytesIO()

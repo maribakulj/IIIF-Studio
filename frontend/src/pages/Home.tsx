@@ -105,13 +105,13 @@ export default function Home() {
         <div className="flex-1 flex items-start justify-center p-6 gap-4">
           <RetroWindow
             title="Corpus disponibles"
-            statusBar={`${corpora.length} corpus enregistre${corpora.length > 1 ? 's' : ''}`}
+            statusBar={`${corpora.length} corpus enregistré${corpora.length > 1 ? 's' : ''}`}
             className="w-full max-w-2xl"
             scrollable
           >
             {corpora.length === 0 ? (
               <div className="p-4 text-retro-sm text-retro-darkgray">
-                Aucun corpus enregistre. Creez-en un via Administration.
+                Aucun corpus enregistré. Créez-en un via Administration.
               </div>
             ) : (
               <div className="divide-y divide-retro-gray">

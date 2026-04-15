@@ -69,7 +69,7 @@ export default function Editor() {
       setRegionValidations(ext?.region_validations ?? {})
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 404) {
-        setError('Cette page n\'a pas encore ete analysee par l\'IA. Lancez le pipeline depuis Administration.')
+        setError('Cette page n\'a pas encore été analysée par l\'IA. Lancez le pipeline depuis Administration.')
       } else {
         const msg = e instanceof Error ? e.message : ''
         setError(msg || 'Erreur de chargement')
@@ -165,7 +165,7 @@ export default function Editor() {
       <RetroMenuBar
         items={[
           { label: 'IIIF Studio', onClick: () => navigate('/') },
-          { label: `Editeur — ${master?.folio_label ?? pageId}` },
+          { label: `Éditeur — ${master?.folio_label ?? pageId}` },
         ]}
         right={
           <div className="flex items-center gap-1">
@@ -199,7 +199,7 @@ export default function Editor() {
             <Viewer iiifServiceUrl={iiifServiceUrl} fallbackImageUrl={fallbackImageUrl} onViewerReady={() => {}} />
             {!iiifServiceUrl && !fallbackImageUrl && (
               <div className="absolute inset-0 flex items-center justify-center bg-retro-gray text-retro-darkgray text-retro-sm">
-                Apercu non disponible
+                Aperçu non disponible
               </div>
             )}
           </div>
@@ -207,7 +207,7 @@ export default function Editor() {
 
         {/* ── Editor window (right) ──────────────────────────────── */}
         <RetroWindow
-          title="Editeur"
+          title="Éditeur"
           className="flex-1 min-w-0"
           scrollable
         >
@@ -240,7 +240,7 @@ export default function Editor() {
                     rows={12}
                   />
                   <RetroSelect
-                    label="Statut editorial"
+                    label="Statut éditorial"
                     value={editorialStatus}
                     onChange={(e) => setEditorialStatus(e.target.value)}
                     options={[
@@ -281,7 +281,7 @@ export default function Editor() {
               {activePanel === 'regions' && (
                 <div className="flex flex-col gap-[2px]">
                   {regions.length === 0 ? (
-                    <p className="text-retro-sm text-retro-darkgray p-2">Aucune region detectee.</p>
+                    <p className="text-retro-sm text-retro-darkgray p-2">Aucune région détectée.</p>
                   ) : (
                     regions.map((region) => {
                       const validation = regionValidations[region.id]
@@ -332,7 +332,7 @@ export default function Editor() {
               {activePanel === 'history' && (
                 <div className="flex flex-col gap-[2px]">
                   {history.length === 0 ? (
-                    <p className="text-retro-sm text-retro-darkgray p-2">Aucune version archivee.</p>
+                    <p className="text-retro-sm text-retro-darkgray p-2">Aucune version archivée.</p>
                   ) : (
                     history.map((v) => (
                       <div

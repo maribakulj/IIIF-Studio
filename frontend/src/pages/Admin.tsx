@@ -84,7 +84,7 @@ function CreateCorpusPanel({ onCreated }: CreateCorpusPanelProps) {
     setLoading(true)
     try {
       const corpus = await createCorpus(form)
-      setSuccess(`Corpus "${corpus.title}" cree.`)
+      setSuccess(`Corpus "${corpus.title}" créé.`)
       setForm((f) => ({ ...f, slug: '', title: '' }))
       onCreated(corpus)
     } catch (err) {
@@ -95,7 +95,7 @@ function CreateCorpusPanel({ onCreated }: CreateCorpusPanelProps) {
   }
 
   return (
-    <RetroWindow title="Creer un corpus" className="max-w-lg">
+    <RetroWindow title="Créer un corpus" className="max-w-lg">
       <form onSubmit={(e) => void handleSubmit(e)} className="p-3 flex flex-col gap-2">
         <RetroInput
           label="Slug (identifiant unique)"
@@ -128,7 +128,7 @@ function CreateCorpusPanel({ onCreated }: CreateCorpusPanelProps) {
             type="submit"
             disabled={loading || !form.slug || !form.title || !form.profile_id}
           >
-            {loading ? 'Creation...' : 'Creer le corpus'}
+            {loading ? 'Création...' : 'Créer le corpus'}
           </RetroButton>
         </div>
       </form>
@@ -193,7 +193,7 @@ function ModelPanel({ corpusId, onSaved }: ModelPanelProps) {
       await selectModel(corpusId, selectedModelId, model?.display_name ?? selectedModelId, selectedProvider, model?.supports_vision ?? true)
       const updated = await getCorpusModel(corpusId)
       setCurrentModel(updated)
-      setSaveSuccess(`Modele "${model?.display_name ?? selectedModelId}" associe.`)
+      setSaveSuccess(`Modèle "${model?.display_name ?? selectedModelId}" associé.`)
       onSaved()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Erreur')
@@ -206,12 +206,12 @@ function ModelPanel({ corpusId, onSaved }: ModelPanelProps) {
     <div className="flex flex-col gap-2">
       {currentModel && (
         <div className="text-retro-sm border border-retro-black p-2 bg-retro-light">
-          Modele actuel: <span className="font-bold">{currentModel.selected_model_display_name}</span>
+          Modèle actuel: <span className="font-bold">{currentModel.selected_model_display_name}</span>
           {' '}({currentModel.provider_type})
         </div>
       )}
 
-      {loadingProviders && <div className="text-retro-sm text-retro-darkgray">Detection providers...</div>}
+      {loadingProviders && <div className="text-retro-sm text-retro-darkgray">Détection providers...</div>}
       {!loadingProviders && providersError && <ErrorMsg message={providersError} />}
       {!loadingProviders && providers.length > 0 && (
         <div className="flex flex-wrap gap-[2px]">
@@ -231,11 +231,11 @@ function ModelPanel({ corpusId, onSaved }: ModelPanelProps) {
 
       {selectedProvider && (
         <form onSubmit={(e) => void handleSelectModel(e)} className="flex flex-col gap-2 max-w-sm">
-          {loadingModels && <div className="text-retro-sm text-retro-darkgray">Chargement modeles...</div>}
+          {loadingModels && <div className="text-retro-sm text-retro-darkgray">Chargement modèles...</div>}
           {!loadingModels && modelsError && <ErrorMsg message={modelsError} />}
           {!loadingModels && models.length > 0 && (
             <RetroSelect
-              label={`Modele — ${providers.find((p) => p.provider_type === selectedProvider)?.display_name}`}
+              label={`Modèle — ${providers.find((p) => p.provider_type === selectedProvider)?.display_name}`}
               value={selectedModelId}
               onChange={(e) => setSelectedModelId(e.target.value)}
               options={models.map((m) => ({
@@ -248,7 +248,7 @@ function ModelPanel({ corpusId, onSaved }: ModelPanelProps) {
           {saveSuccess && <SuccessMsg message={saveSuccess} />}
           {!loadingModels && models.length > 0 && (
             <RetroButton type="submit" disabled={savingModel || !selectedModelId}>
-              {savingModel ? 'Enregistrement...' : 'Selectionner'}
+              {savingModel ? 'Enregistrement...' : 'Sélectionner'}
             </RetroButton>
           )}
         </form>
@@ -285,7 +285,7 @@ function IngestPanel({ corpusId }: { corpusId: string }) {
     setUrlsLoading(true)
     try {
       const resp = await ingestImages(corpusId, urls, labels)
-      setUrlsSuccess(`${resp.pages_created} page(s) ingeree(s).`)
+      setUrlsSuccess(`${resp.pages_created} page(s) ingérée(s).`)
       setUrlsText(''); setFolioLabelsText('')
     } catch (err) { setUrlsError(err instanceof Error ? err.message : 'Erreur') }
     finally { setUrlsLoading(false) }
@@ -296,7 +296,7 @@ function IngestPanel({ corpusId }: { corpusId: string }) {
     setManifestError(null); setManifestSuccess(null); setManifestLoading(true)
     try {
       const resp = await ingestManifest(corpusId, manifestUrl)
-      setManifestSuccess(`${resp.pages_created} page(s) ingeree(s).`)
+      setManifestSuccess(`${resp.pages_created} page(s) ingérée(s).`)
       setManifestUrl('')
     } catch (err) { setManifestError(err instanceof Error ? err.message : 'Erreur') }
     finally { setManifestLoading(false) }
@@ -309,7 +309,7 @@ function IngestPanel({ corpusId }: { corpusId: string }) {
     setFilesLoading(true)
     try {
       const resp = await ingestFiles(corpusId, selectedFiles)
-      setFilesSuccess(`${resp.pages_created} page(s) ingeree(s).`)
+      setFilesSuccess(`${resp.pages_created} page(s) ingérée(s).`)
       setSelectedFiles([])
     } catch (err) { setFilesError(err instanceof Error ? err.message : 'Erreur') }
     finally { setFilesLoading(false) }
@@ -431,18 +431,18 @@ function RunPanel({ corpusId, hasModel }: { corpusId: string; hasModel: boolean 
   }
 
   if (!hasModel) {
-    return <div className="text-retro-sm border border-retro-black p-2 bg-retro-white">Configurez d'abord un modele IA.</div>
+    return <div className="text-retro-sm border border-retro-black p-2 bg-retro-white">Configurez d'abord un modèle IA.</div>
   }
 
   return (
     <div className="flex flex-col gap-2">
       {pageCount !== null && (
-        <div className="text-retro-sm">{pageCount === 0 ? 'Aucune page ingeree.' : `${pageCount} page(s).`}</div>
+        <div className="text-retro-sm">{pageCount === 0 ? 'Aucune page ingérée.' : `${pageCount} page(s).`}</div>
       )}
       {launchError && <ErrorMsg message={launchError} />}
       <div className="flex flex-wrap gap-[2px]">
         <RetroButton onClick={() => void handleRun()} disabled={launching || polling || pageCount === 0}>
-          {launching ? 'Demarrage...' : polling ? 'En cours...' : 'Analyser tout'}
+          {launching ? 'Démarrage...' : polling ? 'En cours...' : 'Analyser tout'}
         </RetroButton>
         {failedCount > 0 && !polling && (
           <RetroButton onClick={() => void handleRetryFailed()}>
@@ -453,7 +453,7 @@ function RunPanel({ corpusId, hasModel }: { corpusId: string; hasModel: boolean 
       {totalCount > 0 && (
         <div>
           <div className="text-retro-sm mb-1">
-            <span className="font-bold">{doneCount}</span>/{totalCount} traitees
+            <span className="font-bold">{doneCount}</span>/{totalCount} traitées
             {failedCount > 0 && <span className="ml-2 font-bold">{failedCount} erreur(s)</span>}
             {polling && <span className="ml-2 text-retro-darkgray">(actualisation 3s)</span>}
           </div>
@@ -516,7 +516,7 @@ function CorpusDetail({ corpus, onDeleted }: { corpus: Corpus; onDeleted: () => 
         </div>
       </div>
 
-      <RetroWindow title="Modele IA">
+      <RetroWindow title="Modèle IA">
         <div className="p-2">
           <ModelPanel key={corpus.id} corpusId={corpus.id} onSaved={() => setHasModel(true)} />
         </div>
@@ -632,7 +632,7 @@ export default function Admin() {
             />
           )}
           {!showCreate && !selectedCorpus && corpora.length > 0 && (
-            <div className="text-retro-sm text-retro-darkgray p-2">Selectionnez un corpus.</div>
+            <div className="text-retro-sm text-retro-darkgray p-2">Sélectionnez un corpus.</div>
           )}
         </div>
       </div>
