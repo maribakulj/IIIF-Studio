@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FC } from 'react'
+import { useEffect, useMemo, useRef, type FC } from 'react'
 import OpenSeadragon from 'openseadragon'
 import { RetroButton } from './retro'
 
@@ -39,7 +39,10 @@ const Viewer: FC<Props> = ({ iiifServiceUrl, fallbackImageUrl, onViewerReady }) 
   }, [])
 
   // Source à ouvrir : préférer le service IIIF (zoom tuilé), sinon image statique
-  const source = iiifServiceUrl || fallbackImageUrl || ''
+  const source = useMemo(
+    () => iiifServiceUrl || fallbackImageUrl || '',
+    [iiifServiceUrl, fallbackImageUrl]
+  )
 
   useEffect(() => {
     const viewer = viewerRef.current
