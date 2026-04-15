@@ -5,6 +5,7 @@ import {
   fetchPages,
   fetchMasterJson,
   fetchProfile,
+  ApiError,
   type Page,
   type PageMaster,
   type CorpusProfile,
@@ -63,10 +64,10 @@ export default function Reader() {
       .then(setMaster)
       .catch((e: unknown) => {
         // 404 = page non analysée (normal), autres erreurs = problème réseau
-        const msg = e instanceof Error ? e.message : ''
-        if (msg.includes('404')) {
+        if (e instanceof ApiError && e.status === 404) {
           setMaster(null)
         } else {
+          const msg = e instanceof Error ? e.message : ''
           setMasterError(msg || 'Erreur de chargement')
         }
       })

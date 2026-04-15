@@ -1,4 +1,4 @@
-import type { TextareaHTMLAttributes } from 'react'
+import { useId, type TextareaHTMLAttributes } from 'react'
 
 interface Props extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   /** Optional label rendered above the textarea */
@@ -6,14 +6,16 @@ interface Props extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export default function RetroTextarea({ label, className = '', ...rest }: Props) {
+  const id = useId()
   return (
     <div className="flex flex-col gap-[2px]">
       {label && (
-        <label className="text-retro-xs font-retro font-medium text-retro-black">
+        <label htmlFor={id} className="text-retro-xs font-retro font-medium text-retro-black">
           {label}
         </label>
       )}
       <textarea
+        id={id}
         className={`
           px-2 py-[3px]
           text-retro-sm font-retro

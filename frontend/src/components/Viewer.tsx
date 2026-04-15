@@ -45,6 +45,10 @@ const Viewer: FC<Props> = ({ iiifServiceUrl, fallbackImageUrl, onViewerReady }) 
     const viewer = viewerRef.current
     if (!viewer || !source) return
 
+    // Remove previous handlers to avoid accumulation on rapid page changes
+    viewer.removeAllHandlers('open')
+    viewer.removeAllHandlers('open-failed')
+
     if (iiifServiceUrl) {
       // Zoom tuilé natif — OpenSeadragon fetch info.json et configure les tuiles
       viewer.open(iiifServiceUrl + '/info.json')
@@ -55,6 +59,10 @@ const Viewer: FC<Props> = ({ iiifServiceUrl, fallbackImageUrl, onViewerReady }) 
 
     viewer.addOnceHandler('open', () => {
       onViewerReadyRef.current?.(viewer)
+    })
+
+    viewer.addOnceHandler('open-failed', () => {
+      console.warn('[Viewer] Failed to open image source:', source)
     })
   }, [source, iiifServiceUrl])
 
