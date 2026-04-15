@@ -27,24 +27,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 _profiles_cache: dict[str, CorpusProfile] | None = None
+_profiles_cache_dir: Path | None = None
 
 
 def _load_all_profiles() -> dict[str, CorpusProfile]:
-    """Charge tous les profils depuis le disque (cache singleton)."""
-    global _profiles_cache
-    if _profiles_cache is not None:
+    """Charge tous les profils depuis le disque (cache invalidé si le répertoire change)."""
+    global _profiles_cache, _profiles_cache_dir
+
+    current_dir = settings.profiles_dir
+    if _profiles_cache is not None and _profiles_cache_dir == current_dir:
         return _profiles_cache
 
     result: dict[str, CorpusProfile] = {}
-    if settings.profiles_dir.is_dir():
-        for path in sorted(settings.profiles_dir.glob("*.json")):
+    if current_dir.is_dir():
+        for path in sorted(current_dir.glob("*.json")):
             profile = _load_profile(path)
             if profile is not None:
                 result[profile.profile_id] = profile
     else:
-        logger.warning("profiles_dir introuvable : %s", settings.profiles_dir)
+        logger.warning("profiles_dir introuvable : %s", current_dir)
 
     _profiles_cache = result
+    _profiles_cache_dir = current_dir
     return _profiles_cache
 
 

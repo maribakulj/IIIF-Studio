@@ -39,7 +39,7 @@ def load_and_render_prompt(template_path: str | Path, context: dict[str, str]) -
     Raises:
         FileNotFoundError: si le fichier template n'existe pas.
     """
-    path = Path(template_path)
+    path = Path(template_path).resolve()
 
     template = _read_template(str(path))
 

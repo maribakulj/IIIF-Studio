@@ -140,12 +140,17 @@ async def test_full_pipeline(pipeline_fixtures, tmp_path):
     mock_provider = MagicMock()
     mock_provider.generate_content.return_value = _FAKE_AI_RESPONSE
 
+    # Reset le cache global des providers pour éviter les interférences
+    import app.services.ai.model_registry as _reg
+    old_providers_cache = _reg._providers_cache
+    _reg._providers_cache = None
+
     try:
         with patch(
             "app.services.job_runner.fetch_ai_derivative_bytes",
             return_value=(_FAKE_JPEG, 1500, 1000),
         ), patch(
-            "app.services.ai.model_registry.get_provider",
+            "app.services.ai.analyzer.get_provider",
             return_value=mock_provider,
         ):
             from app.services.job_runner import _run_job_impl
@@ -153,6 +158,7 @@ async def test_full_pipeline(pipeline_fixtures, tmp_path):
     finally:
         config_mod.settings.__dict__["data_dir"] = original_data_dir
         config_mod.settings.__dict__["profiles_dir"] = original_profiles_dir
+        _reg._providers_cache = old_providers_cache
 
     # -- Assertions ----------------------------------------------------------
     # Job should be done

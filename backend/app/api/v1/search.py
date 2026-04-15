@@ -7,12 +7,15 @@ POST /api/v1/search/reindex
 Implémentation indexée : les données sont dans la table page_search,
 mises à jour à chaque écriture de master.json.
 """
+# 1. stdlib
 import logging
 
+# 2. third-party
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# 3. local
 from app import config as _config_module
 from app.models.database import get_db
 from app.services.search.indexer import reindex_all, search_pages

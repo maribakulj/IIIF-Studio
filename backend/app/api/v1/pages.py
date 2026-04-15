@@ -375,6 +375,7 @@ async def apply_corrections(
     # ── Mise à jour de l'index de recherche ──────────────────────────────
     from app.services.search.indexer import index_page
     await index_page(db, new_master)
+    await db.commit()
 
     logger.info(
         "Corrections appliquées",
