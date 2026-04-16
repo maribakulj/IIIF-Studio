@@ -35,12 +35,14 @@ describe('fetchCorpora', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 404,
+      json: () => Promise.resolve(null),
     })
 
     await expect(api.fetchCorpora()).rejects.toThrow(api.ApiError)
     await mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
+      json: () => Promise.resolve(null),
     })
     await expect(api.fetchCorpora()).rejects.toThrow('HTTP 500')
   })
