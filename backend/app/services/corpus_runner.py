@@ -61,10 +61,9 @@ async def execute_corpus_job(corpus_id: str) -> dict:
 
     # Exécution concurrente avec semaphore — chaque job gère sa propre session
     from app.services.job_runner import execute_page_job
+    from app.config import settings
 
-    _MAX_CONCURRENT = 3  # limiter la pression sur les APIs IA
-
-    sem = asyncio.Semaphore(_MAX_CONCURRENT)
+    sem = asyncio.Semaphore(settings.ai_max_concurrent)
 
     async def _run_one(jid: str) -> None:
         async with sem:

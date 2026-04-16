@@ -22,3 +22,5 @@ class PageSearchIndex(Base):
     diplomatic_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     translation_fr: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Pre-normalized concatenation of all text fields for SQL LIKE search
+    normalized_text: Mapped[str] = mapped_column(Text, nullable=False, default="")

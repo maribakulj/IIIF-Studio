@@ -15,6 +15,7 @@ import pytest
 
 # 3. local
 from app.models.page_search import PageSearchIndex
+from app.services.search.indexer import _build_normalized_text
 from tests.conftest_api import async_client, db_session  # noqa: F401
 
 
@@ -40,6 +41,7 @@ async def _index_page(
         diplomatic_text=diplomatic_text,
         translation_fr=translation_fr,
         tags=tags,
+        normalized_text=_build_normalized_text(diplomatic_text, translation_fr, tags),
     )
     db.add(entry)
     await db.commit()

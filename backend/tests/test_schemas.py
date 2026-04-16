@@ -60,7 +60,6 @@ def minimal_page_master() -> dict:
         "image": {
             "master": "data/corpora/test/masters/0001r.tif",
             "derivative_web": "data/corpora/test/derivatives/0001r.jpg",
-            "iiif_base": "",
             "width": 2000,
             "height": 3000,
         },

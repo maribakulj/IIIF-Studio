@@ -100,7 +100,7 @@ async def _load_master(
         / "corpora"
         / corpus.slug
         / "pages"
-        / page.id
+        / page.folio_label
         / "master.json"
     )
     if not master_path.exists():
@@ -125,7 +125,7 @@ async def _get_page_dir(page: PageModel, db: AsyncSession) -> Path | None:
         / "corpora"
         / corpus.slug
         / "pages"
-        / page.id
+        / page.folio_label
     )
 
 
@@ -388,6 +388,8 @@ async def apply_corrections(
 async def get_page_history(
     page_id: str,
     db: AsyncSession = Depends(get_db),
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[VersionInfo]:
     """Liste les versions archivées du master.json (master_v*.json).
 
@@ -423,4 +425,5 @@ async def get_page_history(
             )
             continue
 
-    return sorted(versions, key=lambda v: v.version)
+    versions.sort(key=lambda v: v.version)
+    return versions[offset:offset + limit]

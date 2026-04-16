@@ -1,22 +1,7 @@
 import type { FC } from 'react'
-import type { Translation, EditorialInfo, EditorialStatus } from '../lib/api.ts'
+import type { Translation, EditorialInfo } from '../lib/api.ts'
+import { STATUS_LABELS, STATUS_VARIANTS } from '../lib/editorial.ts'
 import { RetroBadge } from './retro'
-
-const STATUS_LABELS: Record<EditorialStatus, string> = {
-  machine_draft: 'Brouillon IA',
-  needs_review: 'A reviser',
-  reviewed: 'Revise',
-  validated: 'Valide',
-  published: 'Publie',
-}
-
-const STATUS_VARIANTS: Record<EditorialStatus, 'default' | 'success' | 'warning' | 'error' | 'info'> = {
-  machine_draft: 'info',
-  needs_review: 'warning',
-  reviewed: 'default',
-  validated: 'success',
-  published: 'success',
-}
 
 interface Props {
   translation: Translation | null

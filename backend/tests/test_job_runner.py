@@ -132,7 +132,6 @@ def _page_master(page_id: str, ms_id: str) -> PageMaster:
         image={
             "master": "https://example.com/image.jpg",
             "derivative_web": "/tmp/deriv.jpg",
-            "iiif_base": "",
             "width": 2000,
             "height": 3000,
         },
