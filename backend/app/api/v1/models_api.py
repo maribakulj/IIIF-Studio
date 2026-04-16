@@ -120,7 +120,7 @@ async def set_corpus_model(
     corpus_id: str,
     body: ModelSelectRequest,
     db: AsyncSession = Depends(get_db),
-) -> ModelConfigDB:
+) -> ModelConfigResponse:
     """Associe un modèle IA à un corpus. Crée ou met à jour la configuration."""
     corpus = await db.get(CorpusModel, corpus_id)
     if corpus is None:
@@ -154,7 +154,7 @@ async def set_corpus_model(
 @router.get("/corpora/{corpus_id}/model", response_model=ModelConfigResponse)
 async def get_corpus_model(
     corpus_id: str, db: AsyncSession = Depends(get_db)
-) -> ModelConfigDB:
+) -> ModelConfigResponse:
     """Retourne la configuration du modèle IA actif pour un corpus."""
     corpus = await db.get(CorpusModel, corpus_id)
     if corpus is None:

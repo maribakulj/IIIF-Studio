@@ -40,7 +40,7 @@ export interface CorpusRunResponse {
   job_ids: string[]
 }
 
-export type JobStatus = 'pending' | 'running' | 'done' | 'failed'
+export type JobStatus = 'pending' | 'claimed' | 'running' | 'done' | 'failed'
 
 export interface Job {
   id: string
@@ -153,7 +153,6 @@ export interface ImageInfo {
   master: string
   derivative_web?: string | null
   thumbnail?: string | null
-  iiif_base?: string | null
   iiif_service_url?: string | null
   manifest_url?: string | null
   width: number
@@ -225,7 +224,10 @@ function extractDetail(payload: unknown, fallback: string): string {
 
 async function get<T>(path: string): Promise<T> {
   const resp = await fetch(`${BASE_URL}${path}`)
-  if (!resp.ok) throw new ApiError(resp.status, `HTTP ${resp.status} — ${path}`)
+  if (!resp.ok) {
+    const payload = await resp.json().catch(() => null)
+    throw new ApiError(resp.status, extractDetail(payload, `HTTP ${resp.status} — ${path}`))
+  }
   return resp.json() as Promise<T>
 }
 
@@ -330,10 +332,13 @@ export interface CorpusModelConfig {
   updated_at: string
 }
 
-export const getCorpusModel = (corpusId: string): Promise<CorpusModelConfig | null> =>
-  fetch(`${BASE_URL}/api/v1/corpora/${corpusId}/model`)
-    .then((r) => (r.ok ? (r.json() as Promise<CorpusModelConfig>) : null))
-    .catch(() => null)
+export const getCorpusModel = async (corpusId: string): Promise<CorpusModelConfig | null> => {
+  try {
+    return await get<CorpusModelConfig>(`/api/v1/corpora/${corpusId}/model`)
+  } catch {
+    return null
+  }
+}
 
 export const ingestImages = (
   corpusId: string,

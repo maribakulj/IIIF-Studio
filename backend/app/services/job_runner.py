@@ -196,7 +196,7 @@ async def _run_job_impl(job_id: str, db: AsyncSession) -> None:
             # ── Mode fichier local (upload) ──────────────────────────────────
             source_path = Path(image_source).resolve()
             data_dir_resolved = data_dir.resolve()
-            if not str(source_path).startswith(str(data_dir_resolved) + "/") and source_path != data_dir_resolved:
+            if not source_path.is_relative_to(data_dir_resolved):
                 raise ValueError(
                     f"Chemin image hors du répertoire de données interdit : "
                     f"{image_source!r} (résolu : {source_path})"

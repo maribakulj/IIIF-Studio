@@ -36,6 +36,21 @@ def _migrate_model_configs(connection) -> None:
         logger.info("Migration : colonne supports_vision ajoutée à model_configs")
 
 
+def _migrate_page_search(connection) -> None:
+    """Ajoute la colonne normalized_text si absente (recherche SQL LIKE)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(connection)
+    if "page_search" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("page_search")}
+    if "normalized_text" not in columns:
+        connection.execute(
+            text("ALTER TABLE page_search ADD COLUMN normalized_text TEXT NOT NULL DEFAULT ''")
+        )
+        logger.info("Migration : colonne normalized_text ajoutée à page_search")
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Crée les tables SQLite au démarrage, libère l'engine à l'arrêt."""
@@ -65,9 +80,9 @@ async def lifespan(application: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Migration : ajouter supports_vision aux model_configs existantes
-        # (create_all ne fait pas d'ALTER TABLE sur les tables existantes)
+        # Migrations : create_all ne fait pas d'ALTER TABLE sur les tables existantes
         await conn.run_sync(_migrate_model_configs)
+        await conn.run_sync(_migrate_page_search)
     logger.info("Tables SQLite initialisées")
     yield
     await engine.dispose()
@@ -117,7 +132,7 @@ async def serve_frontend(full_path: str) -> FileResponse | RedirectResponse:
     if _STATIC_DIR.is_dir():
         candidate = (_STATIC_DIR / full_path).resolve()
         # Empêcher le path traversal : le fichier résolu doit être sous _STATIC_DIR
-        if candidate.is_file() and str(candidate).startswith(str(_STATIC_DIR.resolve()) + "/"):
+        if candidate.is_file() and candidate.is_relative_to(_STATIC_DIR.resolve()):
             return FileResponse(candidate)
         index = _STATIC_DIR / "index.html"
         if index.exists():

@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # ── Base de données ───────────────────────────────────────────────────────
     database_url: str = "sqlite+aiosqlite:///./iiif_studio.db"
 
+    # ── Pipeline IA ────────────────────────────────────────────────────────────
+    ai_max_concurrent: int = 3  # jobs IA simultanés par corpus run
+
     # ── Fournisseurs IA (R06 — clés depuis l'environnement uniquement) ────────
     # Chaque clé est optionnelle. Le backend détecte automatiquement quels
     # providers sont disponibles selon les clés présentes. Pas de AI_PROVIDER

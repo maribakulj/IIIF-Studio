@@ -50,7 +50,6 @@ class ImageInfo(BaseModel):
     master: str                           # URL source (service IIIF ou statique) ou chemin local
     derivative_web: str | None = None     # chemin dérivé 1500px (legacy/upload)
     thumbnail: str | None = None          # chemin thumbnail 256px (legacy/upload)
-    iiif_base: str | None = None          # compat arrière
     iiif_service_url: str | None = None   # URL du IIIF Image Service (zoom tuilé)
     manifest_url: str | None = None       # URL du manifest source (provenance)
     width: int                            # largeur du canvas original

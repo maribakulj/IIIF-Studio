@@ -152,7 +152,7 @@ def parse_ai_response(raw_text: str) -> tuple[dict, OCRResult]:
         try:
             region = Region.model_validate(raw_region)
             valid_regions.append(region.model_dump())
-        except (ValidationError, Exception) as exc:
+        except (ValidationError, ValueError, KeyError, TypeError) as exc:
             logger.warning(
                 "Région ignorée — bbox ou champ invalide",
                 extra={"index": i, "region": raw_region, "error": str(exc)},

@@ -337,7 +337,7 @@ async def test_history_with_archived_files(async_client, db_session, tmp_path, m
     page = await _create_page(db_session, ms.id)
 
     # Crée le répertoire avec des fichiers de version
-    page_dir = tmp_path / "corpora" / corpus.slug / "pages" / page.id
+    page_dir = tmp_path / "corpora" / corpus.slug / "pages" / page.folio_label
     page_dir.mkdir(parents=True)
     (page_dir / "master_v1.json").write_text(_make_master(page.id, version=1, status="machine_draft"))
     (page_dir / "master_v2.json").write_text(_make_master(page.id, version=2, status="reviewed"))

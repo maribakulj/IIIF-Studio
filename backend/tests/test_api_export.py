@@ -111,16 +111,16 @@ def _make_master_json(page_id: str, folio_label: str, sequence: int) -> str:
 def _mock_master_files(monkeypatch, pages):
     """Patche Path.exists / Path.read_text pour simuler les master.json."""
     master_data = {
-        p.id: _make_master_json(p.id, p.folio_label, p.sequence)
+        p.folio_label: _make_master_json(p.id, p.folio_label, p.sequence)
         for p in pages
     }
 
     def fake_exists(self: Path) -> bool:
-        return any(p_id in str(self) for p_id in master_data)
+        return any(label in str(self) for label in master_data)
 
     def fake_read_text(self: Path, **kwargs) -> str:
-        for p_id, data in master_data.items():
-            if p_id in str(self):
+        for label, data in master_data.items():
+            if label in str(self):
                 return data
         raise FileNotFoundError(str(self))
 
