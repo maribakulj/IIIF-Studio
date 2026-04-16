@@ -17,30 +17,30 @@ logger = logging.getLogger(__name__)
 # Noms lisibles par provider (pour l'interface)
 _PROVIDER_DISPLAY_NAMES: dict[ProviderType, str] = {
     ProviderType.GOOGLE_AI_STUDIO: "Google AI Studio",
-    ProviderType.VERTEX_API_KEY: "Vertex AI (clé API)",
     ProviderType.VERTEX_SERVICE_ACCOUNT: "Vertex AI (compte de service)",
     ProviderType.MISTRAL: "Mistral AI",
 }
 
 
-def _build_providers() -> list[AIProvider]:
-    """Construit la liste des providers — imports différés.
+_providers_cache: list[AIProvider] | None = None
 
-    Pas de cache global : la construction est triviale (4 objets légers)
-    et l'absence de cache permet de détecter immédiatement les changements
-    de variables d'environnement sans redémarrage.
-    """
+
+def _build_providers() -> list[AIProvider]:
+    """Construit la liste des providers — imports différés, cache singleton."""
+    global _providers_cache
+    if _providers_cache is not None:
+        return _providers_cache
+
     from app.services.ai.provider_google_ai import GoogleAIProvider
     from app.services.ai.provider_mistral import MistralProvider
-    from app.services.ai.provider_vertex_key import VertexAPIKeyProvider
     from app.services.ai.provider_vertex_sa import VertexServiceAccountProvider
 
-    return [
+    _providers_cache = [
         GoogleAIProvider(),
-        VertexAPIKeyProvider(),
         VertexServiceAccountProvider(),
         MistralProvider(),
     ]
+    return _providers_cache
 
 
 def get_available_providers() -> list[dict]:
@@ -168,5 +168,4 @@ def build_model_config(corpus_id: str, selected_model_id: str) -> ModelConfig:
         provider=selected.provider,
         supports_vision=selected.supports_vision,
         last_fetched_at=datetime.now(tz=timezone.utc),
-        available_models=[m.model_dump() for m in models],
     )

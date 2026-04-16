@@ -371,6 +371,12 @@ async def apply_corrections(
             status_code=500,
             detail=f"Impossible d'écrire master.json : {exc}",
         ) from exc
+
+    # ── Mise à jour de l'index de recherche ──────────────────────────────
+    from app.services.search.indexer import index_page
+    await index_page(db, new_master)
+    await db.commit()
+
     logger.info(
         "Corrections appliquées",
         extra={"page_id": page_id, "version": new_master.editorial.version},
@@ -410,7 +416,11 @@ async def get_page_history(
             versions.append(
                 VersionInfo(version=version_num, saved_at=saved_at, status=status)
             )
-        except (json.JSONDecodeError, KeyError, OSError):
+        except (json.JSONDecodeError, KeyError, OSError) as exc:
+            logger.warning(
+                "Archive master.json corrompue, ignorée",
+                extra={"path": str(vpath), "error": str(exc)},
+            )
             continue
 
     return sorted(versions, key=lambda v: v.version)

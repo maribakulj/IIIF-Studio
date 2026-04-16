@@ -9,6 +9,7 @@ Point d'entrée : execute_corpus_job(corpus_id)
 Chaque page reçoit sa propre session pour isoler les échecs.
 """
 # 1. stdlib
+import asyncio
 import logging
 
 # 2. third-party
@@ -58,11 +59,18 @@ async def execute_corpus_job(corpus_id: str) -> dict:
         extra={"corpus_id": corpus_id, "jobs": len(job_ids)},
     )
 
-    # Exécution séquentielle — chaque job gère sa propre session
+    # Exécution concurrente avec semaphore — chaque job gère sa propre session
     from app.services.job_runner import execute_page_job
 
-    for job_id in job_ids:
-        await execute_page_job(job_id)
+    _MAX_CONCURRENT = 3  # limiter la pression sur les APIs IA
+
+    sem = asyncio.Semaphore(_MAX_CONCURRENT)
+
+    async def _run_one(jid: str) -> None:
+        async with sem:
+            await execute_page_job(jid)
+
+    await asyncio.gather(*[_run_one(jid) for jid in job_ids])
 
     # Bilan final
     async with async_session_factory() as db:

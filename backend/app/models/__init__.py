@@ -5,6 +5,7 @@ au moment de la création des tables (Base.metadata.create_all).
 from app.models.corpus import CorpusModel, ManuscriptModel, PageModel
 from app.models.job import JobModel
 from app.models.model_config_db import ModelConfigDB
+from app.models.page_search import PageSearchIndex
 
 __all__ = [
     "CorpusModel",
@@ -12,4 +13,5 @@ __all__ = [
     "PageModel",
     "JobModel",
     "ModelConfigDB",
+    "PageSearchIndex",
 ]

@@ -186,16 +186,34 @@ _MAX_MANIFEST_BYTES = 10 * 1024 * 1024  # 10 Mo max pour un manifest JSON
 
 def _validate_url(url: str) -> None:
     """Rejette les URLs non-HTTP et les cibles réseau privé (SSRF)."""
+    import socket
+    from ipaddress import ip_address
     from urllib.parse import urlparse
 
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise ValueError(f"Schéma non autorisé : {parsed.scheme!r}")
-    host = (parsed.hostname or "").lower()
-    # Bloquer les adresses privées / locales
-    blocked = ("localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal")
-    if host in blocked or host.startswith("169.254.") or host.startswith("10.") or host.startswith("192.168."):
-        raise ValueError(f"Hôte interdit : {host}")
+
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise ValueError("URL sans hostname")
+
+    # Résolution DNS pour détecter les rebinding attacks
+    try:
+        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror:
+        raise ValueError(f"Résolution DNS impossible : {hostname!r}")
+
+    for family, _, _, _, sockaddr in resolved:
+        ip_str = sockaddr[0]
+        try:
+            addr = ip_address(ip_str)
+        except ValueError:
+            continue
+        if addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local:
+            raise ValueError(
+                f"Hôte interdit — {hostname!r} résout vers une adresse privée/réservée : {ip_str}"
+            )
 
 
 async def _fetch_json_manifest(url: str) -> dict:

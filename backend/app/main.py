@@ -117,7 +117,7 @@ async def serve_frontend(full_path: str) -> FileResponse | RedirectResponse:
     if _STATIC_DIR.is_dir():
         candidate = (_STATIC_DIR / full_path).resolve()
         # Empêcher le path traversal : le fichier résolu doit être sous _STATIC_DIR
-        if candidate.is_file() and str(candidate).startswith(str(_STATIC_DIR.resolve())):
+        if candidate.is_file() and str(candidate).startswith(str(_STATIC_DIR.resolve()) + "/"):
             return FileResponse(candidate)
         index = _STATIC_DIR / "index.html"
         if index.exists():

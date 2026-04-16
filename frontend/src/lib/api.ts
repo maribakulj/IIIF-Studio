@@ -188,6 +188,17 @@ export interface CorpusProfile {
   export_config: { mets: boolean; alto: boolean; tei: boolean }
 }
 
+// ── Errors ────────────────────────────────────────────────────────────────────
+
+export class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -214,7 +225,7 @@ function extractDetail(payload: unknown, fallback: string): string {
 
 async function get<T>(path: string): Promise<T> {
   const resp = await fetch(`${BASE_URL}${path}`)
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${path}`)
+  if (!resp.ok) throw new ApiError(resp.status, `HTTP ${resp.status} — ${path}`)
   return resp.json() as Promise<T>
 }
 

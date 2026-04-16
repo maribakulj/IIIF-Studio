@@ -75,6 +75,22 @@ async def _make_failed_job(db, corpus_id, page_id=None):
     return job
 
 
+async def _make_job(db, corpus_id, page_id=None, status="pending"):
+    """Crée un job avec un statut arbitraire."""
+    job = JobModel(
+        id=str(uuid.uuid4()),
+        corpus_id=corpus_id,
+        page_id=page_id,
+        status=status,
+        error_message="err" if status == "failed" else None,
+        created_at=_NOW,
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
 # ---------------------------------------------------------------------------
 # POST /api/v1/corpora/{id}/run
 # ---------------------------------------------------------------------------
@@ -183,15 +199,17 @@ async def test_run_page_job_id_is_uuid(async_client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_run_page_multiple_times_creates_multiple_jobs(async_client, db_session):
-    """Lancer run sur la même page deux fois crée deux jobs distincts."""
+async def test_run_page_duplicate_blocked(async_client, db_session):
+    """Lancer run sur la même page deux fois → 409 sur la seconde tentative."""
     corpus = await _make_corpus(db_session)
     ms = await _make_manuscript(db_session, corpus.id)
     page = await _make_page(db_session, ms.id)
 
-    r1 = (await async_client.post(f"/api/v1/pages/{page.id}/run")).json()
-    r2 = (await async_client.post(f"/api/v1/pages/{page.id}/run")).json()
-    assert r1["id"] != r2["id"]
+    r1 = await async_client.post(f"/api/v1/pages/{page.id}/run")
+    assert r1.status_code == 202
+
+    r2 = await async_client.post(f"/api/v1/pages/{page.id}/run")
+    assert r2.status_code == 409
 
 
 # ---------------------------------------------------------------------------
@@ -287,3 +305,62 @@ async def test_retry_failed_job_is_retrievable(async_client, db_session):
     await async_client.post(f"/api/v1/jobs/{job.id}/retry")
     data = (await async_client.get(f"/api/v1/jobs/{job.id}")).json()
     assert data["status"] == "pending"
+
+
+# ---------------------------------------------------------------------------
+# Rate-limiting guards — duplicate pipeline runs
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_run_corpus_rejects_if_active_jobs(async_client, db_session):
+    """409 si le corpus a déjà un job pending/claimed/running."""
+    corpus = await _make_corpus(db_session, slug="guard-c1")
+    ms = await _make_manuscript(db_session, corpus.id)
+    await _make_page(db_session, ms.id)
+    # Injecter un job pending directement en base
+    await _make_job(db_session, corpus.id, status="pending")
+
+    response = await async_client.post(f"/api/v1/corpora/{corpus.id}/run")
+    assert response.status_code == 409
+    assert "déjà en cours" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_run_page_rejects_if_active_job(async_client, db_session):
+    """409 si la page a déjà un job running."""
+    corpus = await _make_corpus(db_session, slug="guard-p1")
+    ms = await _make_manuscript(db_session, corpus.id)
+    page = await _make_page(db_session, ms.id)
+    # Injecter un job running directement en base
+    await _make_job(db_session, corpus.id, page_id=page.id, status="running")
+
+    response = await async_client.post(f"/api/v1/pages/{page.id}/run")
+    assert response.status_code == 409
+    assert "déjà en cours" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_run_corpus_allows_after_all_done(async_client, db_session):
+    """202 si tous les jobs existants du corpus sont terminés (done)."""
+    corpus = await _make_corpus(db_session, slug="guard-c2")
+    ms = await _make_manuscript(db_session, corpus.id)
+    page = await _make_page(db_session, ms.id)
+    # Injecter des jobs terminés
+    await _make_job(db_session, corpus.id, page_id=page.id, status="done")
+    await _make_job(db_session, corpus.id, page_id=page.id, status="done")
+
+    response = await async_client.post(f"/api/v1/corpora/{corpus.id}/run")
+    assert response.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_run_page_allows_after_failed(async_client, db_session):
+    """202 si le seul job existant pour la page est failed."""
+    corpus = await _make_corpus(db_session, slug="guard-p2")
+    ms = await _make_manuscript(db_session, corpus.id)
+    page = await _make_page(db_session, ms.id)
+    # Injecter un job échoué
+    await _make_job(db_session, corpus.id, page_id=page.id, status="failed")
+
+    response = await async_client.post(f"/api/v1/pages/{page.id}/run")
+    assert response.status_code == 202

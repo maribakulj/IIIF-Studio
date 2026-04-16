@@ -5,6 +5,7 @@ import {
   fetchPages,
   fetchMasterJson,
   fetchProfile,
+  ApiError,
   type Page,
   type PageMaster,
   type CorpusProfile,
@@ -63,10 +64,10 @@ export default function Reader() {
       .then(setMaster)
       .catch((e: unknown) => {
         // 404 = page non analysée (normal), autres erreurs = problème réseau
-        const msg = e instanceof Error ? e.message : ''
-        if (msg.includes('404')) {
+        if (e instanceof ApiError && e.status === 404) {
           setMaster(null)
         } else {
+          const msg = e instanceof Error ? e.message : ''
           setMasterError(msg || 'Erreur de chargement')
         }
       })
@@ -154,7 +155,7 @@ export default function Reader() {
               Next
             </RetroButton>
             <RetroButton size="sm" onClick={() => navigate(`/editor/${currentPage.id}`)}>
-              Editer
+              Éditer
             </RetroButton>
           </div>
         }
@@ -169,7 +170,7 @@ export default function Reader() {
           statusBar={
             master
               ? `${master.editorial.status} — v${master.editorial.version}`
-              : (iiifServiceUrl || fallbackImageUrl) ? 'Page non analysee' : 'Aucune image'
+              : (iiifServiceUrl || fallbackImageUrl) ? 'Page non analysée' : 'Aucune image'
           }
           className="flex-[7] min-w-0"
         >
@@ -216,7 +217,7 @@ export default function Reader() {
               <div className="absolute top-2 left-2">
                 {masterError
                   ? <RetroBadge variant="error">Erreur: {masterError}</RetroBadge>
-                  : <RetroBadge variant="warning">Non analysee</RetroBadge>
+                  : <RetroBadge variant="warning">Non analysée</RetroBadge>
                 }
               </div>
             )}
@@ -263,8 +264,8 @@ export default function Reader() {
             ) : (
               <div className="p-3 text-retro-sm text-retro-darkgray">
                 {(iiifServiceUrl || fallbackImageUrl)
-                  ? 'Page non encore analysee par l\'IA.'
-                  : 'Aucune image associee a cette page.'
+                  ? 'Page non encore analysée par l\'IA.'
+                  : 'Aucune image associée à cette page.'
                 }
               </div>
             )}

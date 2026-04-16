@@ -5,7 +5,7 @@ Schémas Pydantic pour le profil de corpus — entité centrale du pipeline.
 from enum import Enum
 
 # 2. third-party
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LayerType(str, Enum):
@@ -39,6 +39,14 @@ class ExportConfig(BaseModel):
 class UncertaintyConfig(BaseModel):
     flag_below: float = Field(0.4, ge=0.0, le=1.0)
     min_acceptable: float = Field(0.25, ge=0.0, le=1.0)
+
+    @model_validator(mode='after')
+    def flag_must_exceed_min(self) -> 'UncertaintyConfig':
+        if self.flag_below < self.min_acceptable:
+            raise ValueError(
+                f"flag_below ({self.flag_below}) doit être >= min_acceptable ({self.min_acceptable})"
+            )
+        return self
 
 
 class CorpusProfile(BaseModel):

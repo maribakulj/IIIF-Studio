@@ -26,6 +26,31 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
+_profiles_cache: dict[str, CorpusProfile] | None = None
+_profiles_cache_dir: Path | None = None
+
+
+def _load_all_profiles() -> dict[str, CorpusProfile]:
+    """Charge tous les profils depuis le disque (cache invalidé si le répertoire change)."""
+    global _profiles_cache, _profiles_cache_dir
+
+    current_dir = settings.profiles_dir
+    if _profiles_cache is not None and _profiles_cache_dir == current_dir:
+        return _profiles_cache
+
+    result: dict[str, CorpusProfile] = {}
+    if current_dir.is_dir():
+        for path in sorted(current_dir.glob("*.json")):
+            profile = _load_profile(path)
+            if profile is not None:
+                result[profile.profile_id] = profile
+    else:
+        logger.warning("profiles_dir introuvable : %s", current_dir)
+
+    _profiles_cache = result
+    _profiles_cache_dir = current_dir
+    return _profiles_cache
+
 
 def _load_profile(path: Path) -> CorpusProfile | None:
     """Charge et valide un fichier de profil JSON. Retourne None si invalide."""
@@ -40,27 +65,8 @@ def _load_profile(path: Path) -> CorpusProfile | None:
 @router.get("", response_model=list[dict])
 async def list_profiles() -> list[dict]:
     """Retourne tous les profils valides du dossier profiles/."""
-    logger.info(
-        "Résolution profiles_dir",
-        extra={
-            "profiles_dir": str(settings.profiles_dir),
-            "resolved": str(settings.profiles_dir.resolve()),
-            "is_dir": settings.profiles_dir.is_dir(),
-        },
-    )
-    if not settings.profiles_dir.is_dir():
-        logger.warning("profiles_dir introuvable : %s", settings.profiles_dir)
-        return []
-
-    def _scan_profiles() -> list[dict]:
-        result = []
-        for path in sorted(settings.profiles_dir.glob("*.json")):
-            profile = _load_profile(path)
-            if profile is not None:
-                result.append(profile.model_dump())
-        return result
-
-    return await asyncio.to_thread(_scan_profiles)
+    profiles = _load_all_profiles()
+    return [p.model_dump() for p in profiles.values()]
 
 
 _SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -71,16 +77,9 @@ async def get_profile(profile_id: str) -> dict:
     """Retourne un profil par son id (nom du fichier sans extension)."""
     if not _SAFE_ID_RE.match(profile_id):
         raise HTTPException(status_code=400, detail="profile_id invalide")
-    path = settings.profiles_dir / f"{profile_id}.json"
 
-    def _read() -> CorpusProfile | None:
-        if not path.exists():
-            return None
-        return _load_profile(path)
-
-    profile = await asyncio.to_thread(_read)
-    if profile is None and not path.exists():
-        raise HTTPException(status_code=404, detail="Profil introuvable")
+    profiles = _load_all_profiles()
+    profile = profiles.get(profile_id)
     if profile is None:
-        raise HTTPException(status_code=422, detail="Profil invalide")
+        raise HTTPException(status_code=404, detail="Profil introuvable")
     return profile.model_dump()

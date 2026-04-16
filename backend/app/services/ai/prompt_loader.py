@@ -7,9 +7,19 @@ Le code charge le fichier, substitue les variables {{nom}}, envoie à l'API.
 # 1. stdlib
 import logging
 import re
+from functools import lru_cache
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=32)
+def _read_template(path_str: str) -> str:
+    """Lit un template depuis le disque avec cache LRU."""
+    path = Path(path_str)
+    if not path.exists():
+        raise FileNotFoundError(f"Template introuvable : {path_str}")
+    return path.read_text(encoding="utf-8")
 
 
 def load_and_render_prompt(template_path: str | Path, context: dict[str, str]) -> str:
@@ -29,11 +39,9 @@ def load_and_render_prompt(template_path: str | Path, context: dict[str, str]) -
     Raises:
         FileNotFoundError: si le fichier template n'existe pas.
     """
-    path = Path(template_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Template de prompt introuvable : {path}")
+    path = Path(template_path).resolve()
 
-    template = path.read_text(encoding="utf-8")
+    template = _read_template(str(path))
 
     rendered = template
     for key, value in context.items():

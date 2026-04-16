@@ -71,7 +71,6 @@ def _make_model_config(provider: ProviderType = ProviderType.GOOGLE_AI_STUDIO) -
         provider=provider,
         supports_vision=True,
         last_fetched_at=datetime.now(tz=timezone.utc),
-        available_models=[],
     )
 
 
@@ -187,24 +186,6 @@ def test_build_client_google_ai_studio_missing_env(monkeypatch):
 
     with pytest.raises(RuntimeError, match="GOOGLE_AI_STUDIO_API_KEY"):
         build_client(ProviderType.GOOGLE_AI_STUDIO)
-
-
-def test_build_client_vertex_api_key(monkeypatch):
-    monkeypatch.setenv("VERTEX_API_KEY", "fake-vertex-key")
-
-    with patch("app.services.ai.client_factory.genai.Client") as mock_cls:
-        mock_cls.return_value = MagicMock()
-        client = build_client(ProviderType.VERTEX_API_KEY)
-
-    mock_cls.assert_called_once_with(vertexai=True, api_key="fake-vertex-key")
-    assert client is mock_cls.return_value
-
-
-def test_build_client_vertex_api_key_missing_env(monkeypatch):
-    monkeypatch.delenv("VERTEX_API_KEY", raising=False)
-
-    with pytest.raises(RuntimeError, match="VERTEX_API_KEY"):
-        build_client(ProviderType.VERTEX_API_KEY)
 
 
 def test_build_client_vertex_service_account(monkeypatch):

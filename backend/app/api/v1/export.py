@@ -158,7 +158,12 @@ async def get_alto(page_id: str, db: AsyncSession = Depends(get_db)) -> Response
         raise HTTPException(status_code=404, detail="Page introuvable")
 
     manuscript = await db.get(ManuscriptModel, page.manuscript_id)
+    if manuscript is None:
+        raise HTTPException(status_code=404, detail="Manuscrit introuvable")
+
     corpus = await db.get(CorpusModel, manuscript.corpus_id)
+    if corpus is None:
+        raise HTTPException(status_code=404, detail="Corpus introuvable")
 
     master = await _read_master_json(corpus.slug, page_id)
     if master is None:
@@ -188,6 +193,15 @@ async def get_export_zip(
     manuscript, corpus, masters = await _load_manuscript_with_masters(
         manuscript_id, db
     )
+
+    if len(masters) > 500:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Le manuscrit contient {len(masters)} pages. "
+                   "L'export ZIP est limité à 500 pages maximum. "
+                   "Exportez les pages individuellement via GET /pages/{id}/alto.",
+        )
+
     meta = _build_manuscript_meta(manuscript, corpus)
 
     buf = io.BytesIO()

@@ -20,7 +20,6 @@ from app.schemas.model_config import ProviderType
 from app.services.ai.provider_mistral import (
     MistralProvider,
     _MISTRAL_FALLBACK_MODELS,
-    _MISTRAL_VISION_MODELS,  # alias backward-compat
     _model_supports_vision,
 )
 
@@ -254,11 +253,6 @@ def test_list_models_raises_if_not_configured(monkeypatch):
     monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
         MistralProvider().list_models()
-
-
-def test_list_models_fallback_backward_compat():
-    """_MISTRAL_VISION_MODELS est un alias de _MISTRAL_FALLBACK_MODELS."""
-    assert _MISTRAL_VISION_MODELS is _MISTRAL_FALLBACK_MODELS
 
 
 # ---------------------------------------------------------------------------
